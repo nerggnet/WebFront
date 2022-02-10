@@ -1,6 +1,6 @@
 {
   "short_name": "WebFront",
-  "name": "Web front in Elm for backend in F#",
+  "name": "WebFront in Elm for backend in F#",
   "icons": [
     {
       "src": "favicon.ico",
