@@ -76,6 +76,7 @@ flagsDecoder =
         (Json.Decode.field "booksUrl" Json.Decode.string)
 
 
+
 ---- UPDATE ----
 
 
@@ -170,7 +171,11 @@ update msg model =
 view : Model -> Html Msg
 view model =
     layout [] <|
-        column [ width fill, height fill ]
+        column
+            [ width fill
+            , height fill
+            , spacing -1
+            ]
             [ header
             , middle
             , footer model
@@ -179,7 +184,14 @@ view model =
 
 header : Element msg
 header =
-    row [ explain Debug.todo, width fill ]
+    row
+        [ Border.width 1
+        , Border.color darkerGreenishColor
+        , Background.color greyishTealColor
+        , paddingXY 5 5
+        , Font.size 16
+        , width fill
+        ]
         [ el [ alignLeft ] <| text "Left"
         , el [ centerX ] <| text "Center"
         , el [ alignRight ] <| text "Right"
@@ -188,22 +200,117 @@ header =
 
 middle : Element msg
 middle =
-    row [ explain Debug.todo, width fill, height fill ]
-        [ column [ explain Debug.todo, height fill ]
-            [ text "Item 1"
-            , text "Item 2"
-            ]
-        , el [ width fill, height fill ] <| el [ centerX, centerY ] <| text "Content"
+    row
+        [ paddingXY 0 0
+        , spacing -1
+        , width fill
+        , height fill
         ]
+        [ leftList
+        , mainContent
+        ]
+
+
+leftList : Element msg
+leftList =
+    column
+        [ Border.width 1
+        , height fill
+        , spacing 2
+        , paddingXY 2 2
+        , Border.color greenishColor
+        , Background.color magentaColor
+        , Font.size 18
+        ]
+        [ listItem "Recipes"
+        , listItem "Books"
+        ]
+
+
+mainContent : Element msg
+mainContent =
+    el
+        [ width fill
+        , height fill
+        , Border.width 1
+        , Border.color greenishColor
+        , Background.color darkerGreenishColor
+        ]
+    <|
+        el
+            [ centerX
+            , centerY
+            ]
+        <|
+            text "Content"
+
+
+listItem : String -> Element msg
+listItem name =
+    el
+        [ width fill
+        , Border.width 1
+        , Border.color brightMagentaColor
+        , Background.color slightlyBrighterMagentaColor
+        , Border.rounded 4
+        , paddingXY 3 3
+        , pointer
+        , mouseOver [ Background.color brightestMagentaColor ]
+        ]
+    <|
+        text name
 
 
 footer : Model -> Element msg
 footer model =
-    row [ explain Debug.todo, width fill ]
+    row
+        [ Border.width 1
+        , Border.color evenDarkerGreenishColor
+        , Background.color greyishTealColor
+        , paddingXY 5 5
+        , Font.size 16
+        , width fill
+        ]
         [ el [ alignLeft ] <| text "Left"
-        , el [ centerX ] <| text model.flags.mealsUrl
+        , el [ centerX ] <| text "Center"
         , el [ alignRight ] <| text "Right"
         ]
+
+
+greyishTealColor =
+    rgb255 160 190 190
+
+
+magentaColor =
+    rgb255 190 160 190
+
+
+darkerMagentaColor =
+    rgb255 180 150 180
+
+
+slightlyBrighterMagentaColor =
+    rgb255 200 170 200
+
+
+brightMagentaColor =
+    rgb255 210 180 210
+
+
+brightestMagentaColor =
+    rgb255 240 210 240
+
+
+greenishColor =
+    rgb255 160 190 160
+
+
+darkerGreenishColor =
+    rgb255 150 180 150
+
+
+evenDarkerGreenishColor =
+    rgb255 120 140 120
 
 
 
