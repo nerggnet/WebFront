@@ -4,6 +4,7 @@ import Browser
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Html exposing (Html)
 import Http
@@ -16,12 +17,21 @@ import Json.Encode
 
 
 type alias Model =
-    { recipes : List Recipe
+    { page : Page
+    , recipes : List Recipe
     , books : List Book
     , recipeNameToFind : String
     , recipeToInsert : Maybe Recipe
+    , booksByAuthorToFind : String
+    , bookToInsert : Maybe Book
     , flags : Flags
     }
+
+
+type Page
+    = BlankPage
+    | RecipesPage
+    | BooksPage
 
 
 type alias Recipe =
@@ -42,6 +52,7 @@ type alias Flags =
     { environment : String, mealsUrl : String, booksUrl : String }
 
 
+emptyFlags : Flags
 emptyFlags =
     { environment = "", mealsUrl = "", booksUrl = "" }
 
@@ -50,18 +61,24 @@ init : Json.Decode.Value -> ( Model, Cmd Msg )
 init flags =
     ( case Json.Decode.decodeValue flagsDecoder flags of
         Ok decodedFlags ->
-            { recipes = []
+            { page = BlankPage
+            , recipes = []
             , books = []
             , recipeNameToFind = ""
             , recipeToInsert = Nothing
+            , booksByAuthorToFind = ""
+            , bookToInsert = Nothing
             , flags = decodedFlags
             }
 
         Err _ ->
-            { recipes = []
+            { page = BlankPage
+            , recipes = []
             , books = []
             , recipeNameToFind = ""
             , recipeToInsert = Nothing
+            , booksByAuthorToFind = ""
+            , bookToInsert = Nothing
             , flags = emptyFlags
             }
     , Cmd.none
@@ -82,11 +99,21 @@ flagsDecoder =
 
 type Msg
     = FindRecipes String
-    | InsertRecipe Recipe
-    | FindBooks String
-    | InsertBook Book
+    | FindRecipesExecute
     | GotRecipes (Result Http.Error (List Recipe))
-    | GotInsertResponse (Result Http.Error (List Recipe))
+    | InsertRecipe Recipe
+    | InsertRecipeExecute
+    | GotInsertRecipeResponse (Result Http.Error (List Recipe))
+    | FindBooks String
+    | GotBooks (Result Http.Error (List Book))
+    | InsertBook Book
+    | GotInsertBookResponse (Result Http.Error (List Book))
+    | LoadRecipes
+    | LoadRecipesExecute
+    | LoadBooks
+    | LoadBooksExecute
+    | DisplayRecipes
+    | DisplayBooks
 
 
 recipeDecoder : Json.Decode.Decoder Recipe
@@ -110,6 +137,13 @@ findRecipeEncoder name =
         ]
 
 
+getAllRecipesEncoder : Json.Encode.Value
+getAllRecipesEncoder =
+    Json.Encode.object
+        [ ( "Action", Json.Encode.string "Find" )
+        ]
+
+
 insertRecipeEncoder : Recipe -> Json.Encode.Value
 insertRecipeEncoder recipe =
     Json.Encode.object
@@ -117,6 +151,36 @@ insertRecipeEncoder recipe =
         , ( "Name", Json.Encode.string recipe.name )
         , ( "Link", Json.Encode.string recipe.link )
         , ( "Portions", Json.Encode.int recipe.portions )
+        ]
+
+
+bookDecoder : Json.Decode.Decoder Book
+bookDecoder =
+    Json.Decode.map3 Book
+        (Json.Decode.field "Author" Json.Decode.string)
+        (Json.Decode.field "Title" Json.Decode.string)
+        (Json.Decode.field "IsFavorite" Json.Decode.bool)
+
+
+bookListDecoder : Json.Decode.Decoder (List Book)
+bookListDecoder =
+    Json.Decode.list bookDecoder
+
+
+getAllBooksEncoder : Json.Encode.Value
+getAllBooksEncoder =
+    Json.Encode.object
+        [ ( "Action", Json.Encode.string "Find" )
+        ]
+
+
+insertBookEncoder : Book -> Json.Encode.Value
+insertBookEncoder book =
+    Json.Encode.object
+        [ ( "Action", Json.Encode.string "Insert" )
+        , ( "Auhtor", Json.Encode.string book.author )
+        , ( "Title", Json.Encode.string book.title )
+        , ( "IsFavorite", Json.Encode.bool book.isFavorite )
         ]
 
 
@@ -129,6 +193,15 @@ postFindRecipes model =
         }
 
 
+postGetAllRecipes : Model -> Cmd Msg
+postGetAllRecipes model =
+    Http.post
+        { url = model.flags.mealsUrl
+        , body = Http.jsonBody <| getAllRecipesEncoder
+        , expect = Http.expectJson GotRecipes recipeListDecoder
+        }
+
+
 postInsertRecipe : Model -> Cmd Msg
 postInsertRecipe model =
     case model.recipeToInsert of
@@ -136,7 +209,30 @@ postInsertRecipe model =
             Http.post
                 { url = model.flags.mealsUrl
                 , body = Http.jsonBody <| insertRecipeEncoder recipe
-                , expect = Http.expectJson GotInsertResponse recipeListDecoder
+                , expect = Http.expectJson GotInsertRecipeResponse recipeListDecoder
+                }
+
+        Nothing ->
+            Cmd.none
+
+
+postGetAllBooks : Model -> Cmd Msg
+postGetAllBooks model =
+    Http.post
+        { url = model.flags.booksUrl
+        , body = Http.jsonBody <| getAllBooksEncoder
+        , expect = Http.expectJson GotBooks bookListDecoder
+        }
+
+
+postInsertBook : Model -> Cmd Msg
+postInsertBook model =
+    case model.bookToInsert of
+        Just book ->
+            Http.post
+                { url = model.flags.booksUrl
+                , body = Http.jsonBody <| insertBookEncoder book
+                , expect = Http.expectJson GotInsertBookResponse bookListDecoder
                 }
 
         Nothing ->
@@ -147,21 +243,72 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FindRecipes name ->
-            ( { model | recipeNameToFind = name }, postFindRecipes model )
+            update FindRecipesExecute { model | recipeNameToFind = name }
+
+        FindRecipesExecute ->
+            ( model, postFindRecipes model )
 
         InsertRecipe recipe ->
-            ( { model | recipeToInsert = Just recipe }, postInsertRecipe model )
+            update InsertRecipeExecute { model | recipeToInsert = Just recipe }
+
+        InsertRecipeExecute ->
+            ( model, postInsertRecipe model )
 
         GotRecipes result ->
             case result of
                 Ok recipes ->
-                    ( { model | recipes = recipes }, Cmd.none )
+                    update DisplayRecipes { model | recipes = recipes }
 
                 Err _ ->
                     ( { model | recipes = [] }, Cmd.none )
 
-        _ ->
-            ( model, Cmd.none )
+        GotInsertRecipeResponse result ->
+            case result of
+                Ok _ ->
+                    update DisplayRecipes model
+
+                Err _ ->
+                    update DisplayRecipes { model | recipes = [] }
+
+        LoadRecipes ->
+            update LoadRecipesExecute { model | recipeNameToFind = "" }
+
+        LoadRecipesExecute ->
+            ( model, postGetAllRecipes model )
+
+        DisplayRecipes ->
+            ( { model | page = RecipesPage }, Cmd.none )
+
+        FindBooks name ->
+            ( { model | booksByAuthorToFind = name }, Cmd.none )
+
+        GotBooks result ->
+            case result of
+                Ok books ->
+                    update DisplayBooks { model | books = books }
+
+                Err _ ->
+                    ( { model | books = [] }, Cmd.none )
+
+        LoadBooks ->
+            update LoadBooksExecute { model | booksByAuthorToFind = "" }
+
+        LoadBooksExecute ->
+            ( model, postGetAllBooks model )
+
+        DisplayBooks ->
+            ( { model | page = BooksPage }, Cmd.none )
+
+        InsertBook book ->
+            ( { model | bookToInsert = Just book }, postInsertBook model )
+
+        GotInsertBookResponse result ->
+            case result of
+                Ok _ ->
+                    update DisplayBooks model
+
+                Err _ ->
+                    update DisplayBooks { model | books = [] }
 
 
 
@@ -177,12 +324,12 @@ view model =
             , spacing -1
             ]
             [ header
-            , middle
+            , middle model
             , footer model
             ]
 
 
-header : Element msg
+header : Element Msg
 header =
     row
         [ Border.width 1
@@ -198,8 +345,8 @@ header =
         ]
 
 
-middle : Element msg
-middle =
+middle : Model -> Element Msg
+middle model =
     row
         [ paddingXY 0 0
         , spacing -1
@@ -207,11 +354,11 @@ middle =
         , height fill
         ]
         [ leftList
-        , mainContent
+        , mainContent model
         ]
 
 
-leftList : Element msg
+leftList : Element Msg
 leftList =
     column
         [ Border.width 1
@@ -222,13 +369,13 @@ leftList =
         , Background.color magentaColor
         , Font.size 18
         ]
-        [ listItem "Recipes"
-        , listItem "Books"
+        [ listItem "Recipes" LoadRecipes
+        , listItem "Books" LoadBooks
         ]
 
 
-mainContent : Element msg
-mainContent =
+mainContent : Model -> Element Msg
+mainContent model =
     el
         [ width fill
         , height fill
@@ -237,16 +384,78 @@ mainContent =
         , Background.color darkerGreenishColor
         ]
     <|
-        el
-            [ centerX
-            , centerY
+        case model.page of
+            BlankPage ->
+                renderBlankPage
+
+            RecipesPage ->
+                renderTableOfRecipes model
+
+            BooksPage ->
+                renderTableOfBooks model
+
+
+renderBlankPage : Element Msg
+renderBlankPage =
+    el [] Element.none
+
+
+renderTableOfRecipes : Model -> Element Msg
+renderTableOfRecipes model =
+    Element.table
+        [ centerX
+        , centerY
+        ]
+        { data = model.recipes
+        , columns =
+            [ { header = Element.text "Name"
+              , width = px 200
+              , view =
+                    \recipe ->
+                        Element.text recipe.name
+              }
+            , { header = Element.text "Link"
+              , width = px 300
+              , view =
+                    \recipe ->
+                        Element.text recipe.link
+              }
+            , { header = Element.text "Portions"
+              , width = fill
+              , view =
+                    \recipe ->
+                        Element.text <| String.fromInt recipe.portions
+              }
             ]
-        <|
-            text "Content"
+        }
 
 
-listItem : String -> Element msg
-listItem name =
+renderTableOfBooks : Model -> Element Msg
+renderTableOfBooks model =
+    Element.table
+        [ centerX
+        , centerY
+        ]
+        { data = model.books
+        , columns =
+            [ { header = Element.text "Author"
+              , width = px 200
+              , view =
+                    \book ->
+                        Element.text book.author
+              }
+            , { header = Element.text "Title"
+              , width = fill
+              , view =
+                    \book ->
+                        Element.text book.title
+              }
+            ]
+        }
+
+
+listItem : String -> Msg -> Element Msg
+listItem name msg =
     el
         [ width fill
         , Border.width 1
@@ -256,13 +465,14 @@ listItem name =
         , paddingXY 3 3
         , pointer
         , mouseOver [ Background.color brightestMagentaColor ]
+        , Events.onClick msg
         ]
     <|
         text name
 
 
-footer : Model -> Element msg
-footer model =
+footer : Model -> Element Msg
+footer _ =
     row
         [ Border.width 1
         , Border.color evenDarkerGreenishColor
@@ -277,38 +487,51 @@ footer model =
         ]
 
 
+
+---- COLORS ----
+
+
+greyishTealColor : Color
 greyishTealColor =
     rgb255 160 190 190
 
 
+magentaColor : Color
 magentaColor =
     rgb255 190 160 190
 
 
+darkerMagentaColor : Color
 darkerMagentaColor =
     rgb255 180 150 180
 
 
+slightlyBrighterMagentaColor : Color
 slightlyBrighterMagentaColor =
     rgb255 200 170 200
 
 
+brightMagentaColor : Color
 brightMagentaColor =
     rgb255 210 180 210
 
 
+brightestMagentaColor : Color
 brightestMagentaColor =
     rgb255 240 210 240
 
 
+greenishColor : Color
 greenishColor =
     rgb255 160 190 160
 
 
+darkerGreenishColor : Color
 darkerGreenishColor =
     rgb255 150 180 150
 
 
+evenDarkerGreenishColor : Color
 evenDarkerGreenishColor =
     rgb255 120 140 120
 
