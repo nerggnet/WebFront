@@ -6,6 +6,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
+import Element.Input as Input
 import Html exposing (Html)
 import Http
 import Json.Decode
@@ -24,6 +25,7 @@ type alias Model =
     , recipeToInsert : Maybe Recipe
     , booksByAuthorToFind : String
     , bookToInsert : Maybe Book
+    , userText : String
     , flags : Flags
     }
 
@@ -59,28 +61,25 @@ emptyFlags =
 
 init : Json.Decode.Value -> ( Model, Cmd Msg )
 init flags =
-    ( case Json.Decode.decodeValue flagsDecoder flags of
-        Ok decodedFlags ->
-            { page = BlankPage
-            , recipes = []
-            , books = []
-            , recipeNameToFind = ""
-            , recipeToInsert = Nothing
-            , booksByAuthorToFind = ""
-            , bookToInsert = Nothing
-            , flags = decodedFlags
-            }
+    let
+        decodedFlags =
+            case Json.Decode.decodeValue flagsDecoder flags of
+                Ok okFlags ->
+                    okFlags
 
-        Err _ ->
-            { page = BlankPage
-            , recipes = []
-            , books = []
-            , recipeNameToFind = ""
-            , recipeToInsert = Nothing
-            , booksByAuthorToFind = ""
-            , bookToInsert = Nothing
-            , flags = emptyFlags
-            }
+                Err _ ->
+                    emptyFlags
+    in
+    ( { page = BlankPage
+      , recipes = []
+      , books = []
+      , recipeNameToFind = ""
+      , recipeToInsert = Nothing
+      , booksByAuthorToFind = ""
+      , bookToInsert = Nothing
+      , userText = ""
+      , flags = decodedFlags
+      }
     , Cmd.none
     )
 
@@ -114,6 +113,7 @@ type Msg
     | LoadBooksExecute
     | DisplayRecipes
     | DisplayBooks
+    | UserTypedText String
 
 
 recipeDecoder : Json.Decode.Decoder Recipe
@@ -310,6 +310,9 @@ update msg model =
                 Err _ ->
                     update DisplayBooks { model | books = [] }
 
+        UserTypedText text ->
+            ( { model | userText = text }, Cmd.none )
+
 
 
 ---- VIEW ----
@@ -389,7 +392,11 @@ mainContent model =
                 renderBlankPage
 
             RecipesPage ->
-                renderTableOfRecipes model
+                column
+                    [ width fill ]
+                    [ renderTableOfRecipes model
+                    , renderAddRecipeInput model
+                    ]
 
             BooksPage ->
                 renderTableOfBooks model
@@ -402,53 +409,81 @@ renderBlankPage =
 
 renderTableOfRecipes : Model -> Element Msg
 renderTableOfRecipes model =
-    Element.table
-        [ centerX
+    table
+        [ width fill
+        , centerX
         , centerY
+        , Font.color darkerMagentaColor
+        , Border.width 1
+        , Border.rounded 4
+        , paddingXY 2 2
+        , spacing 4
         ]
         { data = model.recipes
         , columns =
-            [ { header = Element.text "Name"
-              , width = px 200
+            [ { header = el [ Font.italic, Font.underline ] <| text "Name"
+              , width = fillPortion 3
               , view =
                     \recipe ->
-                        Element.text recipe.name
+                        paragraph [] [ text recipe.name ]
               }
-            , { header = Element.text "Link"
-              , width = px 300
+            , { header = el [ Font.italic, Font.underline ] <| text "Link"
+              , width = fillPortion 3
               , view =
                     \recipe ->
-                        Element.text recipe.link
+                        paragraph [] [ text recipe.link ]
               }
-            , { header = Element.text "Portions"
-              , width = fill
+            , { header = el [ Font.italic, Font.underline ] <| text "Portions"
+              , width = fillPortion 1
               , view =
                     \recipe ->
-                        Element.text <| String.fromInt recipe.portions
+                        paragraph [] [ text <| String.fromInt recipe.portions ]
               }
             ]
         }
 
 
+renderAddRecipeInput : Model -> Element Msg
+renderAddRecipeInput model =
+    el
+        [ width fill
+        , Font.color darkerMagentaColor
+        , Border.width 1
+        , Border.rounded 4
+        , paddingXY 2 2
+        ]
+    <|
+        Input.text [ width <| maximum 300 fill ]
+            { onChange = UserTypedText
+            , text = model.userText
+            , placeholder = Just <| Input.placeholder [] <| text "Type here"
+            , label = Input.labelAbove [] <| text "Text input"
+            }
+
+
 renderTableOfBooks : Model -> Element Msg
 renderTableOfBooks model =
-    Element.table
+    table
         [ centerX
         , centerY
+        , Font.color darkerMagentaColor
+        , Border.width 1
+        , Border.rounded 4
+        , paddingXY 2 2
         ]
         { data = model.books
         , columns =
-            [ { header = Element.text "Author"
-              , width = px 200
+            [ { header = el [ Font.italic, Font.underline ] <| text "Author"
+              , width = fillPortion 2
               , view =
                     \book ->
-                        Element.text book.author
+                        text book.author
               }
-            , { header = Element.text "Title"
-              , width = fill
+            , { header = el [ Font.italic, Font.underline ] <| text "Title"
+              , width = fillPortion 3
               , view =
                     \book ->
-                        Element.text book.title
+                        text book.title
               }
             ]
         }
@@ -503,7 +538,7 @@ magentaColor =
 
 darkerMagentaColor : Color
 darkerMagentaColor =
-    rgb255 180 150 180
+    rgb255 80 50 80
 
 
 slightlyBrighterMagentaColor : Color
