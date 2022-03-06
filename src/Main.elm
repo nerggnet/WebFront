@@ -122,7 +122,6 @@ postInsertRecipe model =
             Cmd.none
 
 
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -177,7 +176,7 @@ view model =
         column
             [ width fill
             , height fill
-            , spacing -1
+            , spacing 0
             ]
             [ header
             , middle model
@@ -188,9 +187,9 @@ view model =
 header : Element Msg
 header =
     row
-        [ Border.width 1
-        , Border.color darkerGreenishColor
-        , Background.color greyishTealColor
+        [ Border.widthEach { top = 0, bottom = 1, left = 0, right = 0 }
+        , Border.color headerBorderColor
+        , Background.color headerBackgroundColor
         , paddingXY 5 5
         , Font.size 16
         , width fill
@@ -205,7 +204,7 @@ middle : Model -> Element Msg
 middle model =
     row
         [ paddingXY 0 0
-        , spacing -1
+        , spacing 0
         , width fill
         , height fill
         ]
@@ -217,12 +216,12 @@ middle model =
 leftList : Element Msg
 leftList =
     column
-        [ Border.width 1
+        [ Border.widthEach { top = 0, bottom = 0, left = 0, right = 1 }
         , height fill
         , spacing 2
         , paddingXY 2 2
-        , Border.color greenishColor
-        , Background.color magentaColor
+        , Border.color leftListBorderColor
+        , Background.color leftListBackgroundColor
         , Font.size 18
         ]
         [ listItem "Recipes" LoadRecipes
@@ -234,9 +233,9 @@ mainContent model =
     el
         [ width fill
         , height fill
-        , Border.width 1
-        , Border.color greenishColor
-        , Background.color darkerGreenishColor
+        , Border.width 2
+        , Border.color mainContentBorderColor
+        , Background.color mainContentBackgroundColor
         ]
     <|
         case model.page of
@@ -339,9 +338,9 @@ listItem name msg =
 footer : Model -> Element Msg
 footer _ =
     row
-        [ Border.width 1
-        , Border.color evenDarkerGreenishColor
-        , Background.color greyishTealColor
+        [ Border.widthEach { top = 1, bottom = 0, left = 0, right = 0 }
+        , Border.color footerBorderColor
+        , Background.color footerBackgroundColor
         , paddingXY 5 5
         , Font.size 16
         , width fill
@@ -356,6 +355,50 @@ footer _ =
 ---- COLORS ----
 
 
+headerBorderColor : Color
+headerBorderColor =
+    evenDarkerGreenishColor
+
+
+headerBackgroundColor : Color
+headerBackgroundColor =
+    greyishTealColor
+
+
+footerBorderColor : Color
+footerBorderColor =
+    evenDarkerGreenishColor
+
+
+footerBackgroundColor : Color
+footerBackgroundColor =
+    greyishTealColor
+
+
+leftListBorderColor : Color
+leftListBorderColor =
+    darkerMagentaColor
+
+
+leftListBackgroundColor : Color
+leftListBackgroundColor =
+    magentaColor
+
+
+mainContentBorderColor : Color
+mainContentBorderColor =
+    greenishColor
+
+
+mainContentBackgroundColor : Color
+mainContentBackgroundColor =
+    darkerGreenishColor
+
+
+
+---- BASE COLORS ----
+
+
 greyishTealColor : Color
 greyishTealColor =
     rgb255 160 190 190
@@ -368,7 +411,7 @@ magentaColor =
 
 darkerMagentaColor : Color
 darkerMagentaColor =
-    rgb255 80 50 80
+    rgb255 150 120 150
 
 
 slightlyBrighterMagentaColor : Color
