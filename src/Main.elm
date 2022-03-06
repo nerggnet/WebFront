@@ -1,6 +1,9 @@
 module Main exposing (main)
 
+--import Json.Encode
+
 import Browser
+import Domain
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -9,8 +12,8 @@ import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
 import Http
+import HttpJsonController
 import Json.Decode
-import Json.Encode
 
 
 
@@ -19,12 +22,9 @@ import Json.Encode
 
 type alias Model =
     { page : Page
-    , recipes : List Recipe
-    , books : List Book
+    , recipes : List Domain.Recipe
     , recipeNameToFind : String
-    , recipeToInsert : Maybe Recipe
-    , booksByAuthorToFind : String
-    , bookToInsert : Maybe Book
+    , recipeToInsert : Maybe Domain.Recipe
     , userText : String
     , flags : Flags
     }
@@ -33,30 +33,15 @@ type alias Model =
 type Page
     = BlankPage
     | RecipesPage
-    | BooksPage
-
-
-type alias Recipe =
-    { name : String
-    , link : String
-    , portions : Int
-    }
-
-
-type alias Book =
-    { author : String
-    , title : String
-    , isFavorite : Bool
-    }
 
 
 type alias Flags =
-    { environment : String, mealsUrl : String, booksUrl : String }
+    { environment : String, mealsUrl : String }
 
 
 emptyFlags : Flags
 emptyFlags =
-    { environment = "", mealsUrl = "", booksUrl = "" }
+    { environment = "", mealsUrl = "" }
 
 
 init : Json.Decode.Value -> ( Model, Cmd Msg )
@@ -72,11 +57,8 @@ init flags =
     in
     ( { page = BlankPage
       , recipes = []
-      , books = []
       , recipeNameToFind = ""
       , recipeToInsert = Nothing
-      , booksByAuthorToFind = ""
-      , bookToInsert = Nothing
       , userText = ""
       , flags = decodedFlags
       }
@@ -86,10 +68,9 @@ init flags =
 
 flagsDecoder : Json.Decode.Decoder Flags
 flagsDecoder =
-    Json.Decode.map3 Flags
+    Json.Decode.map2 Flags
         (Json.Decode.field "environment" Json.Decode.string)
         (Json.Decode.field "mealsUrl" Json.Decode.string)
-        (Json.Decode.field "booksUrl" Json.Decode.string)
 
 
 
@@ -99,97 +80,22 @@ flagsDecoder =
 type Msg
     = FindRecipes String
     | FindRecipesExecute
-    | GotRecipes (Result Http.Error (List Recipe))
-    | InsertRecipe Recipe
+    | GotRecipes (Result Http.Error HttpJsonController.ResponseJson)
+    | InsertRecipe Domain.Recipe
     | InsertRecipeExecute
-    | GotInsertRecipeResponse (Result Http.Error (List Recipe))
-    | FindBooks String
-    | GotBooks (Result Http.Error (List Book))
-    | InsertBook Book
-    | GotInsertBookResponse (Result Http.Error (List Book))
+    | GotInsertRecipeResponse (Result Http.Error HttpJsonController.ResponseJson)
     | LoadRecipes
     | LoadRecipesExecute
-    | LoadBooks
-    | LoadBooksExecute
     | DisplayRecipes
-    | DisplayBooks
     | UserTypedText String
-
-
-recipeDecoder : Json.Decode.Decoder Recipe
-recipeDecoder =
-    Json.Decode.map3 Recipe
-        (Json.Decode.field "Name" Json.Decode.string)
-        (Json.Decode.field "Link" Json.Decode.string)
-        (Json.Decode.field "Portions" Json.Decode.int)
-
-
-recipeListDecoder : Json.Decode.Decoder (List Recipe)
-recipeListDecoder =
-    Json.Decode.list recipeDecoder
-
-
-findRecipeEncoder : String -> Json.Encode.Value
-findRecipeEncoder name =
-    Json.Encode.object
-        [ ( "Action", Json.Encode.string "Find" )
-        , ( "Name", Json.Encode.string name )
-        ]
-
-
-getAllRecipesEncoder : Json.Encode.Value
-getAllRecipesEncoder =
-    Json.Encode.object
-        [ ( "Action", Json.Encode.string "Find" )
-        ]
-
-
-insertRecipeEncoder : Recipe -> Json.Encode.Value
-insertRecipeEncoder recipe =
-    Json.Encode.object
-        [ ( "Action", Json.Encode.string "Insert" )
-        , ( "Name", Json.Encode.string recipe.name )
-        , ( "Link", Json.Encode.string recipe.link )
-        , ( "Portions", Json.Encode.int recipe.portions )
-        ]
-
-
-bookDecoder : Json.Decode.Decoder Book
-bookDecoder =
-    Json.Decode.map3 Book
-        (Json.Decode.field "Author" Json.Decode.string)
-        (Json.Decode.field "Title" Json.Decode.string)
-        (Json.Decode.field "IsFavorite" Json.Decode.bool)
-
-
-bookListDecoder : Json.Decode.Decoder (List Book)
-bookListDecoder =
-    Json.Decode.list bookDecoder
-
-
-getAllBooksEncoder : Json.Encode.Value
-getAllBooksEncoder =
-    Json.Encode.object
-        [ ( "Action", Json.Encode.string "Find" )
-        ]
-
-
-insertBookEncoder : Book -> Json.Encode.Value
-insertBookEncoder book =
-    Json.Encode.object
-        [ ( "Action", Json.Encode.string "Insert" )
-        , ( "Auhtor", Json.Encode.string book.author )
-        , ( "Title", Json.Encode.string book.title )
-        , ( "IsFavorite", Json.Encode.bool book.isFavorite )
-        ]
 
 
 postFindRecipes : Model -> Cmd Msg
 postFindRecipes model =
     Http.post
         { url = model.flags.mealsUrl
-        , body = Http.jsonBody <| findRecipeEncoder model.recipeNameToFind
-        , expect = Http.expectJson GotRecipes recipeListDecoder
+        , body = Http.jsonBody <| HttpJsonController.findRecipeEncoder model.recipeNameToFind
+        , expect = Http.expectJson GotRecipes HttpJsonController.responseDecoder
         }
 
 
@@ -197,8 +103,8 @@ postGetAllRecipes : Model -> Cmd Msg
 postGetAllRecipes model =
     Http.post
         { url = model.flags.mealsUrl
-        , body = Http.jsonBody <| getAllRecipesEncoder
-        , expect = Http.expectJson GotRecipes recipeListDecoder
+        , body = Http.jsonBody <| HttpJsonController.getAllRecipesEncoder
+        , expect = Http.expectJson GotRecipes HttpJsonController.responseDecoder
         }
 
 
@@ -208,35 +114,13 @@ postInsertRecipe model =
         Just recipe ->
             Http.post
                 { url = model.flags.mealsUrl
-                , body = Http.jsonBody <| insertRecipeEncoder recipe
-                , expect = Http.expectJson GotInsertRecipeResponse recipeListDecoder
+                , body = Http.jsonBody <| HttpJsonController.insertRecipeEncoder recipe
+                , expect = Http.expectJson GotInsertRecipeResponse HttpJsonController.responseDecoder
                 }
 
         Nothing ->
             Cmd.none
 
-
-postGetAllBooks : Model -> Cmd Msg
-postGetAllBooks model =
-    Http.post
-        { url = model.flags.booksUrl
-        , body = Http.jsonBody <| getAllBooksEncoder
-        , expect = Http.expectJson GotBooks bookListDecoder
-        }
-
-
-postInsertBook : Model -> Cmd Msg
-postInsertBook model =
-    case model.bookToInsert of
-        Just book ->
-            Http.post
-                { url = model.flags.booksUrl
-                , body = Http.jsonBody <| insertBookEncoder book
-                , expect = Http.expectJson GotInsertBookResponse bookListDecoder
-                }
-
-        Nothing ->
-            Cmd.none
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -256,8 +140,8 @@ update msg model =
 
         GotRecipes result ->
             case result of
-                Ok recipes ->
-                    update DisplayRecipes { model | recipes = recipes }
+                Ok response ->
+                    update DisplayRecipes { model | recipes = response.recipes }
 
                 Err _ ->
                     ( { model | recipes = [] }, Cmd.none )
@@ -278,37 +162,6 @@ update msg model =
 
         DisplayRecipes ->
             ( { model | page = RecipesPage }, Cmd.none )
-
-        FindBooks name ->
-            ( { model | booksByAuthorToFind = name }, Cmd.none )
-
-        GotBooks result ->
-            case result of
-                Ok books ->
-                    update DisplayBooks { model | books = books }
-
-                Err _ ->
-                    ( { model | books = [] }, Cmd.none )
-
-        LoadBooks ->
-            update LoadBooksExecute { model | booksByAuthorToFind = "" }
-
-        LoadBooksExecute ->
-            ( model, postGetAllBooks model )
-
-        DisplayBooks ->
-            ( { model | page = BooksPage }, Cmd.none )
-
-        InsertBook book ->
-            ( { model | bookToInsert = Just book }, postInsertBook model )
-
-        GotInsertBookResponse result ->
-            case result of
-                Ok _ ->
-                    update DisplayBooks model
-
-                Err _ ->
-                    update DisplayBooks { model | books = [] }
 
         UserTypedText text ->
             ( { model | userText = text }, Cmd.none )
@@ -373,7 +226,6 @@ leftList =
         , Font.size 18
         ]
         [ listItem "Recipes" LoadRecipes
-        , listItem "Books" LoadBooks
         ]
 
 
@@ -397,9 +249,6 @@ mainContent model =
                     [ renderTableOfRecipes model
                     , renderAddRecipeInput model
                     ]
-
-            BooksPage ->
-                renderTableOfBooks model
 
 
 renderBlankPage : Element Msg
@@ -431,7 +280,16 @@ renderTableOfRecipes model =
               , width = fillPortion 3
               , view =
                     \recipe ->
-                        paragraph [] [ text recipe.link ]
+                        paragraph []
+                            [ text
+                                (case recipe.link of
+                                    Just link ->
+                                        link
+
+                                    Nothing ->
+                                        ""
+                                )
+                            ]
               }
             , { header = el [ Font.italic, Font.underline ] <| text "Portions"
               , width = fillPortion 1
@@ -459,34 +317,6 @@ renderAddRecipeInput model =
             , placeholder = Just <| Input.placeholder [] <| text "Type here"
             , label = Input.labelAbove [] <| text "Text input"
             }
-
-
-renderTableOfBooks : Model -> Element Msg
-renderTableOfBooks model =
-    table
-        [ centerX
-        , centerY
-        , Font.color darkerMagentaColor
-        , Border.width 1
-        , Border.rounded 4
-        , paddingXY 2 2
-        ]
-        { data = model.books
-        , columns =
-            [ { header = el [ Font.italic, Font.underline ] <| text "Author"
-              , width = fillPortion 2
-              , view =
-                    \book ->
-                        text book.author
-              }
-            , { header = el [ Font.italic, Font.underline ] <| text "Title"
-              , width = fillPortion 3
-              , view =
-                    \book ->
-                        text book.title
-              }
-            ]
-        }
 
 
 listItem : String -> Msg -> Element Msg
