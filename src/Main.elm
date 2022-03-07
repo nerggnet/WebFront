@@ -25,6 +25,9 @@ type alias Model =
     , recipeNameToFind : D.RecipeName
     , recipeToInsert : Maybe D.Recipe
     , recipeToFocus : Maybe D.Recipe
+    , menus : List D.Menu
+    , menuNameToFind : D.MenuName
+    , menuToFocus : Maybe D.Menu
     , userText : String
     , footerMessage : String
     , flags : Flags
@@ -34,6 +37,7 @@ type alias Model =
 type Page
     = TitlePage
     | RecipesPage
+    | MenusPage
 
 
 type alias Flags =
@@ -61,6 +65,9 @@ init flags =
       , recipeNameToFind = ""
       , recipeToInsert = Nothing
       , recipeToFocus = Nothing
+      , menus = []
+      , menuNameToFind = ""
+      , menuToFocus = Nothing
       , userText = ""
       , footerMessage = ""
       , flags = decodedFlags
@@ -92,6 +99,11 @@ type Msg
     | LoadRecipesExecute
     | DisplayRecipes
     | DisplayRecipeDetails D.Recipe
+    | LoadMenus
+    | LoadMenusExecute
+    | GotMenus (Result Http.Error HttpJsonController.ResponseJson)
+    | DisplayMenus
+    | DisplayMenuDetails D.Menu
     | UserTypedText String
 
 
@@ -158,11 +170,20 @@ postInsertRecipe model =
             Cmd.none
 
 
+postGetAllMenus : Model -> Cmd Msg
+postGetAllMenus model =
+    Http.post
+        { url = model.flags.mealsUrl
+        , body = Http.jsonBody <| HttpJsonController.getAllMenusEncoder
+        , expect = expectJson_ GotMenus HttpJsonController.responseDecoder
+        }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         DisplayTitle ->
-            ( { model | page = TitlePage, recipeToFocus = Nothing }, Cmd.none )
+            ( { model | page = TitlePage, recipeToFocus = Nothing, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
 
         FindRecipes name ->
             update FindRecipesExecute { model | recipeNameToFind = name }
@@ -232,8 +253,42 @@ update msg model =
         DisplayRecipeDetails recipe ->
             ( { model | recipeToFocus = Just recipe }, Cmd.none )
 
+        LoadMenus ->
+            update LoadMenusExecute { model | menuNameToFind = "" }
+
+        LoadMenusExecute ->
+            ( model, postGetAllMenus model )
+
+        DisplayMenus ->
+            ( { model | page = MenusPage }, Cmd.none )
+
         UserTypedText text ->
             ( { model | userText = text }, Cmd.none )
+
+        GotMenus result ->
+            case result of
+                Ok response ->
+                    let
+                        newFooterMessage =
+                            case response.message of
+                                Just message ->
+                                    message
+
+                                Nothing ->
+                                    ""
+                    in
+                    update DisplayMenus { model | menus = response.menus, footerMessage = newFooterMessage }
+
+                Err httpError ->
+                    case httpError of
+                        Http.BadBody badBodyMsg ->
+                            ( { model | menus = [], footerMessage = badBodyMsg }, Cmd.none )
+
+                        _ ->
+                            ( { model | menus = [], footerMessage = "Unknown Error" }, Cmd.none )
+
+        DisplayMenuDetails menu ->
+            ( { model | menuToFocus = Just menu }, Cmd.none )
 
 
 
@@ -265,22 +320,22 @@ header =
         , width fill
         ]
         [ el [ alignLeft ] <| homeButton
-        , el [ centerX ] <| text "Center"
-        , el [ alignRight ] <| text "Right"
+        , el [ centerX, Font.italic ] <| text "Meals by nerggnet"
+        , el [ alignRight, Font.size 24 ] <| text "》"
         ]
 
 
 homeButton : Element Msg
 homeButton =
     el
-        [ Font.size 20
+        [ Font.size 24
         , paddingXY 3 3
         , Border.rounded 4
         , mouseOver [ Background.color C.darkerGreyishTealColor ]
         , Events.onClick DisplayTitle
         ]
     <|
-        text "Home"
+        text "⟲ Home"
 
 
 middle : Model -> Element Msg
@@ -308,6 +363,7 @@ leftList =
         , Font.size 18
         ]
         [ listItem "Recipes" LoadRecipes
+        , listItem "Menus" LoadMenus
         ]
 
 
@@ -331,6 +387,13 @@ mainContent model =
                     [ renderRecipeSelector model
                     , renderRecipeDetails model
                     , renderAddRecipeInput model
+                    ]
+
+            MenusPage ->
+                column
+                    [ width fill ]
+                    [ renderMenuSelector model
+                    , renderMenuDetails model
                     ]
 
 
@@ -367,7 +430,7 @@ renderRecipeSelector model =
 
 renderRecipeListItem : D.Recipe -> Element Msg
 renderRecipeListItem recipe =
-    el [ mouseOver [ Background.color C.recipeSelectorItemHighlightColor ], Events.onClick (DisplayRecipeDetails recipe) ] <| text recipe.name
+    el [ mouseOver [ Background.color C.selectorItemHighlightColor ], Events.onClick (DisplayRecipeDetails recipe) ] <| text recipe.name
 
 
 renderRecipeDetails : Model -> Element Msg
@@ -440,6 +503,61 @@ renderAddRecipeInput model =
             }
 
 
+renderMenuSelector : Model -> Element Msg
+renderMenuSelector model =
+    column
+        [ Border.width 1
+        , Border.rounded 4
+        , paddingXY 2 3
+        ]
+        [ row []
+            [ el [ Font.italic, Border.widthEach { top = 0, bottom = 1, right = 0, left = 0 } ] <| text "Menu name"
+            ]
+        , el [] <|
+            table
+                [ scrollbarY
+                , spacing 4
+                ]
+                { data = model.menus
+                , columns =
+                    [ { header = none
+                      , width = maximum 500 fill
+                      , view = \menu -> renderMenuListItem menu
+                      }
+                    ]
+                }
+        ]
+
+
+renderMenuListItem : D.Menu -> Element Msg
+renderMenuListItem menu =
+    el [ mouseOver [ Background.color C.selectorItemHighlightColor ], Events.onClick (DisplayMenuDetails menu) ] <| text menu.name
+
+
+renderMenuDetails : Model -> Element Msg
+renderMenuDetails model =
+    case model.menuToFocus of
+        Nothing ->
+            Element.none
+
+        Just menu ->
+            column
+                [ width fill
+                , Border.width 1
+                , Border.rounded 4
+                , paddingXY 2 3
+                ]
+                [ renderMenuBaseInfo menu
+                ]
+
+
+renderMenuBaseInfo : D.Menu -> Element Msg
+renderMenuBaseInfo menu =
+    column []
+        [ el [ Font.size 24 ] <| text menu.name
+        ]
+
+
 listItem : String -> Msg -> Element Msg
 listItem name msg =
     el
@@ -467,9 +585,9 @@ footer model =
         , Font.size 16
         , width fill
         ]
-        [ el [ alignLeft ] <| text "Left"
+        [ el [ alignLeft, Font.size 24 ] <| text "《"
         , el [ centerX ] <| text model.footerMessage
-        , el [ alignRight ] <| text "Right"
+        , el [ alignRight, Font.size 24 ] <| text "》"
         ]
 
 

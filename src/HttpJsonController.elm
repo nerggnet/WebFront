@@ -370,3 +370,10 @@ commentEncoder comment =
     JE.object
         [ ( "Comment", JE.string comment.comment )
         ]
+
+
+getAllMenusEncoder : JE.Value
+getAllMenusEncoder =
+    JE.object
+        [ ( "Action", JE.string "FindMenu" )
+        ]

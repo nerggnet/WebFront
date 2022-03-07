@@ -72,8 +72,8 @@ mainContentBackgroundColor =
     darkerGreenishColor
 
 
-recipeSelectorItemHighlightColor : Color
-recipeSelectorItemHighlightColor =
+selectorItemHighlightColor : Color
+selectorItemHighlightColor =
     greenishColor
 
 
