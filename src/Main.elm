@@ -1,9 +1,8 @@
 module Main exposing (main)
 
---import Json.Encode
-
 import Browser
-import Domain
+import Colors as C
+import Domain as D
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -22,16 +21,18 @@ import Json.Decode
 
 type alias Model =
     { page : Page
-    , recipes : List Domain.Recipe
-    , recipeNameToFind : String
-    , recipeToInsert : Maybe Domain.Recipe
+    , recipes : List D.Recipe
+    , recipeNameToFind : D.RecipeName
+    , recipeToInsert : Maybe D.Recipe
+    , recipeToFocus : Maybe D.Recipe
     , userText : String
+    , footerMessage : String
     , flags : Flags
     }
 
 
 type Page
-    = BlankPage
+    = TitlePage
     | RecipesPage
 
 
@@ -55,11 +56,13 @@ init flags =
                 Err _ ->
                     emptyFlags
     in
-    ( { page = BlankPage
+    ( { page = TitlePage
       , recipes = []
       , recipeNameToFind = ""
       , recipeToInsert = Nothing
+      , recipeToFocus = Nothing
       , userText = ""
+      , footerMessage = ""
       , flags = decodedFlags
       }
     , Cmd.none
@@ -78,16 +81,49 @@ flagsDecoder =
 
 
 type Msg
-    = FindRecipes String
+    = DisplayTitle
+    | FindRecipes String
     | FindRecipesExecute
     | GotRecipes (Result Http.Error HttpJsonController.ResponseJson)
-    | InsertRecipe Domain.Recipe
+    | InsertRecipe D.Recipe
     | InsertRecipeExecute
     | GotInsertRecipeResponse (Result Http.Error HttpJsonController.ResponseJson)
     | LoadRecipes
     | LoadRecipesExecute
     | DisplayRecipes
+    | DisplayRecipeDetails D.Recipe
     | UserTypedText String
+
+
+expectJson_ : (Result Http.Error a -> msg) -> Json.Decode.Decoder a -> Http.Expect msg
+expectJson_ toMsg decoder =
+    Http.expectStringResponse toMsg <|
+        \response ->
+            case response of
+                Http.BadUrl_ url ->
+                    Err (Http.BadUrl url)
+
+                Http.Timeout_ ->
+                    Err Http.Timeout
+
+                Http.NetworkError_ ->
+                    Err Http.NetworkError
+
+                Http.BadStatus_ metadata body ->
+                    case Json.Decode.decodeString decoder body of
+                        Ok value ->
+                            Ok value
+
+                        Err _ ->
+                            Err (Http.BadStatus metadata.statusCode)
+
+                Http.GoodStatus_ _ body ->
+                    case Json.Decode.decodeString decoder body of
+                        Ok value ->
+                            Ok value
+
+                        Err err ->
+                            Err (Http.BadBody (Json.Decode.errorToString err))
 
 
 postFindRecipes : Model -> Cmd Msg
@@ -104,7 +140,7 @@ postGetAllRecipes model =
     Http.post
         { url = model.flags.mealsUrl
         , body = Http.jsonBody <| HttpJsonController.getAllRecipesEncoder
-        , expect = Http.expectJson GotRecipes HttpJsonController.responseDecoder
+        , expect = expectJson_ GotRecipes HttpJsonController.responseDecoder
         }
 
 
@@ -125,6 +161,9 @@ postInsertRecipe model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        DisplayTitle ->
+            ( { model | page = TitlePage, recipeToFocus = Nothing }, Cmd.none )
+
         FindRecipes name ->
             update FindRecipesExecute { model | recipeNameToFind = name }
 
@@ -140,18 +179,46 @@ update msg model =
         GotRecipes result ->
             case result of
                 Ok response ->
-                    update DisplayRecipes { model | recipes = response.recipes }
+                    let
+                        newFooterMessage =
+                            case response.message of
+                                Just message ->
+                                    message
 
-                Err _ ->
-                    ( { model | recipes = [] }, Cmd.none )
+                                Nothing ->
+                                    ""
+                    in
+                    update DisplayRecipes { model | recipes = response.recipes, footerMessage = newFooterMessage }
+
+                Err httpError ->
+                    case httpError of
+                        Http.BadBody badBodyMsg ->
+                            ( { model | recipes = [], footerMessage = badBodyMsg }, Cmd.none )
+
+                        _ ->
+                            ( { model | recipes = [], footerMessage = "Unknown Error" }, Cmd.none )
 
         GotInsertRecipeResponse result ->
             case result of
-                Ok _ ->
-                    update DisplayRecipes model
+                Ok response ->
+                    let
+                        newFooterMessage =
+                            case response.message of
+                                Just message ->
+                                    message
 
-                Err _ ->
-                    update DisplayRecipes { model | recipes = [] }
+                                Nothing ->
+                                    ""
+                    in
+                    update DisplayRecipes { model | footerMessage = newFooterMessage }
+
+                Err httpError ->
+                    case httpError of
+                        Http.BadBody badBodyMsg ->
+                            update DisplayRecipes { model | recipes = [], footerMessage = badBodyMsg }
+
+                        _ ->
+                            update DisplayRecipes { model | recipes = [], footerMessage = "Unknown Error" }
 
         LoadRecipes ->
             update LoadRecipesExecute { model | recipeNameToFind = "" }
@@ -161,6 +228,9 @@ update msg model =
 
         DisplayRecipes ->
             ( { model | page = RecipesPage }, Cmd.none )
+
+        DisplayRecipeDetails recipe ->
+            ( { model | recipeToFocus = Just recipe }, Cmd.none )
 
         UserTypedText text ->
             ( { model | userText = text }, Cmd.none )
@@ -188,16 +258,29 @@ header : Element Msg
 header =
     row
         [ Border.widthEach { top = 0, bottom = 1, left = 0, right = 0 }
-        , Border.color headerBorderColor
-        , Background.color headerBackgroundColor
+        , Border.color C.headerBorderColor
+        , Background.color C.headerBackgroundColor
         , paddingXY 5 5
         , Font.size 16
         , width fill
         ]
-        [ el [ alignLeft ] <| text "Left"
+        [ el [ alignLeft ] <| homeButton
         , el [ centerX ] <| text "Center"
         , el [ alignRight ] <| text "Right"
         ]
+
+
+homeButton : Element Msg
+homeButton =
+    el
+        [ Font.size 20
+        , paddingXY 3 3
+        , Border.rounded 4
+        , mouseOver [ Background.color C.darkerGreyishTealColor ]
+        , Events.onClick DisplayTitle
+        ]
+    <|
+        text "Home"
 
 
 middle : Model -> Element Msg
@@ -220,8 +303,8 @@ leftList =
         , height fill
         , spacing 2
         , paddingXY 2 2
-        , Border.color leftListBorderColor
-        , Background.color leftListBackgroundColor
+        , Border.color C.leftListBorderColor
+        , Background.color C.leftListBackgroundColor
         , Font.size 18
         ]
         [ listItem "Recipes" LoadRecipes
@@ -234,18 +317,19 @@ mainContent model =
         [ width fill
         , height fill
         , Border.width 2
-        , Border.color mainContentBorderColor
-        , Background.color mainContentBackgroundColor
+        , Border.color C.mainContentBorderColor
+        , Background.color C.mainContentBackgroundColor
         ]
     <|
         case model.page of
-            BlankPage ->
+            TitlePage ->
                 renderBlankPage
 
             RecipesPage ->
                 column
                     [ width fill ]
-                    [ renderTableOfRecipes model
+                    [ renderRecipeSelector model
+                    , renderRecipeDetails model
                     , renderAddRecipeInput model
                     ]
 
@@ -255,56 +339,94 @@ renderBlankPage =
     el [] Element.none
 
 
-renderTableOfRecipes : Model -> Element Msg
-renderTableOfRecipes model =
-    table
-        [ width fill
-        , centerX
-        , centerY
-        , Font.color darkerMagentaColor
-        , Border.width 1
+renderRecipeSelector : Model -> Element Msg
+renderRecipeSelector model =
+    column
+        [ Border.width 1
         , Border.rounded 4
-        , paddingXY 2 2
-        , spacing 4
+        , paddingXY 2 3
         ]
-        { data = model.recipes
-        , columns =
-            [ { header = el [ Font.italic, Font.underline ] <| text "Name"
-              , width = fillPortion 3
-              , view =
-                    \recipe ->
-                        paragraph [] [ text recipe.name ]
-              }
-            , { header = el [ Font.italic, Font.underline ] <| text "Link"
-              , width = fillPortion 3
-              , view =
-                    \recipe ->
-                        paragraph []
-                            [ text
-                                (case recipe.link of
-                                    Just link ->
-                                        link
-
-                                    Nothing ->
-                                        ""
-                                )
-                            ]
-              }
-            , { header = el [ Font.italic, Font.underline ] <| text "Portions"
-              , width = fillPortion 1
-              , view =
-                    \recipe ->
-                        paragraph [] [ text <| String.fromInt recipe.portions ]
-              }
+        [ row []
+            [ el [ Font.italic, Border.widthEach { top = 0, bottom = 1, right = 0, left = 0 } ] <| text "Recipe name"
             ]
-        }
+        , el [] <|
+            table
+                [ scrollbarY
+                , spacing 4
+                ]
+                { data = model.recipes
+                , columns =
+                    [ { header = none
+                      , width = maximum 500 fill
+                      , view = \recipe -> renderRecipeListItem recipe
+                      }
+                    ]
+                }
+        ]
+
+
+renderRecipeListItem : D.Recipe -> Element Msg
+renderRecipeListItem recipe =
+    el [ mouseOver [ Background.color C.recipeSelectorItemHighlightColor ], Events.onClick (DisplayRecipeDetails recipe) ] <| text recipe.name
+
+
+renderRecipeDetails : Model -> Element Msg
+renderRecipeDetails model =
+    case model.recipeToFocus of
+        Nothing ->
+            Element.none
+
+        Just recipe ->
+            column
+                [ width fill
+                , Border.width 1
+                , Border.rounded 4
+                , paddingXY 2 3
+                ]
+                [ renderRecipeBaseInfo recipe
+                , renderRecipeIngredients recipe
+                , renderRecipeInstructions recipe
+                , renderRecipeComments recipe
+                ]
+
+
+renderRecipeBaseInfo : D.Recipe -> Element Msg
+renderRecipeBaseInfo recipe =
+    let
+        recipeLink =
+            case recipe.link of
+                Just link ->
+                    link
+
+                Nothing ->
+                    "#"
+    in
+    column []
+        [ el [ Font.size 24 ] <| text recipe.name
+        , el [] <| text <| "No. of portions: " ++ String.fromInt recipe.portions
+        , el [] <| newTabLink [ Font.underline, Font.color C.linkColor ] { url = recipeLink, label = text "Recipe link" }
+        ]
+
+
+renderRecipeIngredients : D.Recipe -> Element Msg
+renderRecipeIngredients recipe =
+    Element.none
+
+
+renderRecipeInstructions : D.Recipe -> Element Msg
+renderRecipeInstructions recipe =
+    Element.none
+
+
+renderRecipeComments : D.Recipe -> Element Msg
+renderRecipeComments recipe =
+    Element.none
 
 
 renderAddRecipeInput : Model -> Element Msg
 renderAddRecipeInput model =
     el
         [ width fill
-        , Font.color darkerMagentaColor
         , Border.width 1
         , Border.rounded 4
         , paddingXY 2 2
@@ -323,12 +445,12 @@ listItem name msg =
     el
         [ width fill
         , Border.width 1
-        , Border.color brightMagentaColor
-        , Background.color slightlyBrighterMagentaColor
+        , Border.color C.leftListItemBorderColor
+        , Background.color C.leftListItemBackgroundColor
         , Border.rounded 4
         , paddingXY 3 3
         , pointer
-        , mouseOver [ Background.color brightestMagentaColor ]
+        , mouseOver [ Background.color C.leftListItemHighlightColor ]
         , Events.onClick msg
         ]
     <|
@@ -336,112 +458,19 @@ listItem name msg =
 
 
 footer : Model -> Element Msg
-footer _ =
+footer model =
     row
         [ Border.widthEach { top = 1, bottom = 0, left = 0, right = 0 }
-        , Border.color footerBorderColor
-        , Background.color footerBackgroundColor
+        , Border.color C.footerBorderColor
+        , Background.color C.footerBackgroundColor
         , paddingXY 5 5
         , Font.size 16
         , width fill
         ]
         [ el [ alignLeft ] <| text "Left"
-        , el [ centerX ] <| text "Center"
+        , el [ centerX ] <| text model.footerMessage
         , el [ alignRight ] <| text "Right"
         ]
-
-
-
----- COLORS ----
-
-
-headerBorderColor : Color
-headerBorderColor =
-    evenDarkerGreenishColor
-
-
-headerBackgroundColor : Color
-headerBackgroundColor =
-    greyishTealColor
-
-
-footerBorderColor : Color
-footerBorderColor =
-    evenDarkerGreenishColor
-
-
-footerBackgroundColor : Color
-footerBackgroundColor =
-    greyishTealColor
-
-
-leftListBorderColor : Color
-leftListBorderColor =
-    darkerMagentaColor
-
-
-leftListBackgroundColor : Color
-leftListBackgroundColor =
-    magentaColor
-
-
-mainContentBorderColor : Color
-mainContentBorderColor =
-    greenishColor
-
-
-mainContentBackgroundColor : Color
-mainContentBackgroundColor =
-    darkerGreenishColor
-
-
-
----- BASE COLORS ----
-
-
-greyishTealColor : Color
-greyishTealColor =
-    rgb255 160 190 190
-
-
-magentaColor : Color
-magentaColor =
-    rgb255 190 160 190
-
-
-darkerMagentaColor : Color
-darkerMagentaColor =
-    rgb255 150 120 150
-
-
-slightlyBrighterMagentaColor : Color
-slightlyBrighterMagentaColor =
-    rgb255 200 170 200
-
-
-brightMagentaColor : Color
-brightMagentaColor =
-    rgb255 210 180 210
-
-
-brightestMagentaColor : Color
-brightestMagentaColor =
-    rgb255 240 210 240
-
-
-greenishColor : Color
-greenishColor =
-    rgb255 160 190 160
-
-
-darkerGreenishColor : Color
-darkerGreenishColor =
-    rgb255 150 180 150
-
-
-evenDarkerGreenishColor : Color
-evenDarkerGreenishColor =
-    rgb255 120 140 120
 
 
 
