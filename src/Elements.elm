@@ -288,12 +288,11 @@ renderAboutPage _ =
         ]
         [ el [ paddingEach { top = 0, bottom = 0, left = 5, right = 0 }, Font.size 24 ] <| text "About Meals by nerggnet"
         , el [ paddingEach { top = 6, bottom = 0, left = 0, right = 0 } ] <|
-            textColumn [ spacing 5, padding 5 ]
+            column [ spacing 5, padding 5 ]
                 [ paragraph []
                     [ text "Front in Elm ("
                     , newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://elm-lang.org/", label = text "elm-lang.org" }
-                    , text ")"
-                    , text " and Elm-UI ("
+                    , text ") and Elm-UI ("
                     , newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://github.com/mdgriffith/elm-ui", label = text "github.com/mdgriffith/elm-ui" }
                     , text ")"
                     ]
