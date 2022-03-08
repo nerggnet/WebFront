@@ -63,6 +63,9 @@ update msg model =
         M.DisplayTitle ->
             ( { model | page = M.TitlePage, recipeToFocus = Nothing, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
 
+        M.DisplayAbout ->
+            ( { model | page = M.AboutPage, recipeToFocus = Nothing, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
+
         M.FindRecipes name ->
             update M.FindRecipesExecute { model | recipeNameToFind = name }
 

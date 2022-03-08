@@ -23,7 +23,7 @@ header =
         ]
         [ el [ alignLeft ] <| homeButton
         , el [ centerX, Font.italic ] <| text "Meals by nerggnet"
-        , el [ alignRight, Font.size 24 ] <| text "》"
+        , el [ alignRight, Font.size 24 ] <| aboutButton
         ]
 
 
@@ -38,6 +38,19 @@ homeButton =
         ]
     <|
         text "⟲ Home"
+
+
+aboutButton : Element M.Msg
+aboutButton =
+    el
+        [ Font.size 24
+        , paddingXY 3 3
+        , Border.rounded 4
+        , mouseOver [ Background.color C.darkerGreyishTealColor ]
+        , Events.onClick M.DisplayAbout
+        ]
+    <|
+        text "👀💭"
 
 
 middle : M.Model -> Element M.Msg
@@ -97,6 +110,11 @@ mainContent model =
                     [ renderMenuSelector model
                     , renderMenuDetails model
                     ]
+
+            M.AboutPage ->
+                column
+                    [ width fill ]
+                    [ renderAboutPage model ]
 
 
 renderBlankPage : Element M.Msg
@@ -174,17 +192,17 @@ renderRecipeBaseInfo recipe =
 
 
 renderRecipeIngredients : D.Recipe -> Element M.Msg
-renderRecipeIngredients recipe =
+renderRecipeIngredients _ =
     Element.none
 
 
 renderRecipeInstructions : D.Recipe -> Element M.Msg
-renderRecipeInstructions recipe =
+renderRecipeInstructions _ =
     Element.none
 
 
 renderRecipeComments : D.Recipe -> Element M.Msg
-renderRecipeComments recipe =
+renderRecipeComments _ =
     Element.none
 
 
@@ -257,6 +275,31 @@ renderMenuBaseInfo : D.Menu -> Element M.Msg
 renderMenuBaseInfo menu =
     column []
         [ el [ Font.size 24 ] <| text menu.name
+        ]
+
+
+renderAboutPage : M.Model -> Element M.Msg
+renderAboutPage _ =
+    column
+        [ width fill
+        , Border.width 1
+        , Border.rounded 4
+        , paddingXY 2 3
+        ]
+        [ el [ paddingEach { top = 0, bottom = 0, left = 5, right = 0 }, Font.size 24 ] <| text "About Meals by nerggnet"
+        , el [ paddingEach { top = 6, bottom = 0, left = 0, right = 0 } ] <|
+            textColumn [ spacing 5, padding 5 ]
+                [ paragraph []
+                    [ text "Front in Elm ("
+                    , newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://elm-lang.org/", label = text "elm-lang.org" }
+                    , text ")"
+                    , text " and Elm-UI ("
+                    , newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://github.com/mdgriffith/elm-ui", label = text "github.com/mdgriffith/elm-ui" }
+                    , text ")"
+                    ]
+                , paragraph [] [ text "Backend in F# (", newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://fsharp.org/", label = text "fsharp.org" }, text ")" ]
+                , paragraph [] [ text "Source: ", newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://github.com/nerggnet/", label = text "github.com/nerggnet" } ]
+                ]
         ]
 
 

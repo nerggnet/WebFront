@@ -24,6 +24,7 @@ type Page
     = TitlePage
     | RecipesPage
     | MenusPage
+    | AboutPage
 
 
 type alias Flags =
@@ -32,6 +33,7 @@ type alias Flags =
 
 type Msg
     = DisplayTitle
+    | DisplayAbout
     | FindRecipes String
     | FindRecipesExecute
     | GotRecipes (Result Http.Error H.ResponseJson)
