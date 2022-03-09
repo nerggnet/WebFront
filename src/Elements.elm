@@ -33,7 +33,7 @@ homeButton =
         [ Font.size 24
         , paddingXY 3 3
         , Border.rounded 4
-        , mouseOver [ Background.color C.darkerGreyishTealColor ]
+        , mouseOver [ Background.color C.headerHighlightColor ]
         , Events.onClick M.DisplayTitle
         ]
     <|
@@ -46,7 +46,7 @@ aboutButton =
         [ Font.size 24
         , paddingXY 3 3
         , Border.rounded 4
-        , mouseOver [ Background.color C.darkerGreyishTealColor ]
+        , mouseOver [ Background.color C.headerHighlightColor ]
         , Events.onClick M.DisplayAbout
         ]
     <|
@@ -113,7 +113,7 @@ mainContent model =
 
             M.AboutPage ->
                 column
-                    [ width fill ]
+                    [ width fill, height fill ]
                     [ renderAboutPage model ]
 
 
@@ -282,6 +282,7 @@ renderAboutPage : M.Model -> Element M.Msg
 renderAboutPage _ =
     column
         [ width fill
+        , height fill
         , Border.width 1
         , Border.rounded 4
         , paddingXY 2 3
@@ -299,6 +300,8 @@ renderAboutPage _ =
                 , paragraph [] [ text "Backend in F# (", newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://fsharp.org/", label = text "fsharp.org" }, text ")" ]
                 , paragraph [] [ text "Source: ", newTabLink [ Font.underline, Font.color C.linkColor ] { url = "https://github.com/nerggnet/", label = text "github.com/nerggnet" } ]
                 ]
+        , el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] <| none
+        , el [ width (fill |> maximum 800), height (fill |> maximum 239), Background.uncropped "black_transparent_logo.png" ] <| none
         ]
 
 

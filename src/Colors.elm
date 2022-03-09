@@ -72,6 +72,11 @@ mainContentBackgroundColor =
     darkerGreenishColor
 
 
+mainContentDividerColor : Color
+mainContentDividerColor =
+    evenDarkerGreenishColor
+
+
 selectorItemHighlightColor : Color
 selectorItemHighlightColor =
     greenishColor
