@@ -72,6 +72,11 @@ mainContentBackgroundColor =
     darkerGreenishColor
 
 
+mainContentSectionBackgroundColor : Color
+mainContentSectionBackgroundColor =
+    slightlyLessDarkGreenishColor
+
+
 mainContentDividerColor : Color
 mainContentDividerColor =
     evenDarkerGreenishColor
@@ -128,7 +133,7 @@ brightestMagentaColor =
 
 greenishColor : Color
 greenishColor =
-    rgb255 160 190 160
+    rgb255 163 193 163
 
 
 darkerGreenishColor : Color
@@ -139,3 +144,8 @@ darkerGreenishColor =
 evenDarkerGreenishColor : Color
 evenDarkerGreenishColor =
     rgb255 120 140 120
+
+
+slightlyLessDarkGreenishColor : Color
+slightlyLessDarkGreenishColor =
+    rgb255 155 185 155

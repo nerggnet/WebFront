@@ -87,8 +87,6 @@ mainContent model =
     el
         [ width fill
         , height fill
-        , Border.width 2
-        , Border.color C.mainContentBorderColor
         , Background.color C.mainContentBackgroundColor
         , Font.size <| model.fontSize
         ]
@@ -98,11 +96,21 @@ mainContent model =
                 blankPage
 
             M.RecipesPage ->
+                let
+                    smallBoxSpacing =
+                        px (model.fontSize // 4)
+
+                    bigBoxSpacing =
+                        px (model.fontSize // 2)
+                in
                 column
                     [ width fill ]
-                    [ recipeSelector model
-                    , recipeDetails model
-                    , addRecipeInput model
+                    [ el [ width fill, height smallBoxSpacing ] none
+                    , row [ width fill ] [ el [ width smallBoxSpacing ] none, recipeSelector model, el [ width smallBoxSpacing ] none ]
+                    , el [ width fill, height bigBoxSpacing ] none
+                    , row [ width fill ] [ el [ width smallBoxSpacing ] none, recipeDetails model, el [ width smallBoxSpacing ] none ]
+                    , el [ width fill, height bigBoxSpacing ] none
+                    , row [ width fill ] [ el [ width smallBoxSpacing ] none, addRecipeInput model, el [ width smallBoxSpacing ] none ]
                     ]
 
             M.MenusPage ->
@@ -127,9 +135,9 @@ recipeSelector : M.Model -> Element M.Msg
 recipeSelector model =
     column
         [ width fill
-        , Border.width 1
-        , Border.rounded 4
-        , paddingXY 2 3
+        , Background.color C.mainContentSectionBackgroundColor
+        , Border.rounded 6
+        , paddingXY 5 3
         ]
         [ row []
             [ el [ Font.italic, Font.underline ] <| text "Recipe name"
@@ -165,13 +173,13 @@ recipeDetails model =
         Just recipe ->
             column
                 [ width fill
-                , Border.width 1
-                , Border.rounded 4
-                , paddingXY 2 3
+                , Background.color C.mainContentSectionBackgroundColor
+                , Border.rounded 6
+                , paddingXY 5 3
                 ]
                 [ recipeBaseInfo model recipe
                 , recipeIngredients model recipe
-                , recipeInstructions recipe
+                , recipeInstructions model recipe
                 , recipeComments recipe
                 ]
 
@@ -190,7 +198,7 @@ recipeBaseInfo model recipe =
         headerFontSize =
             round <| toFloat model.fontSize * 1.3
     in
-    paragraph []
+    paragraph [ width fill ]
         [ el [ Font.size headerFontSize ] <| text recipe.name
         , el [ paddingXY model.fontSize 0 ] none
         , el [ width fill, paddingXY (model.fontSize // 2) 0 ] <| el [ width (px 1), height (px model.fontSize), Background.color C.mainContentDividerColor ] none
@@ -202,14 +210,10 @@ recipeBaseInfo model recipe =
 
 recipeIngredients : M.Model -> D.Recipe -> Element M.Msg
 recipeIngredients model recipe =
-    let
-        headerFontSize =
-            round <| toFloat model.fontSize * 1.3
-    in
-    column []
-        [ el [ Font.size headerFontSize, paddingEach { top = (model.fontSize // 2), bottom = 0, left = 0, right = 0 } ] <| text "Ingredients"
+    column [ width fill ]
+        [ el [ paddingEach { top = model.fontSize // 2, bottom = 0, left = 0, right = 0 } ] <| text "Ingredients"
         , el [ width fill, paddingXY 0 (model.fontSize // 4) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
-        , el [] <|
+        , el [ width fill ] <|
             table
                 [ scrollbarY
                 , spacingXY 15 4
@@ -246,14 +250,14 @@ ingredientTableItemProductName ingredient =
 
 
 ingredientTableItemQuantityAmount : M.Model -> D.Ingredient -> Element M.Msg
-ingredientTableItemQuantityAmount model ingredient =
+ingredientTableItemQuantityAmount _ ingredient =
     el
         [ mouseOver [ Background.color C.mainContentHighlightColor ]
 
         --, Events.onClick (M.DisplayRecipeDetails recipe)
         ]
     <|
-        el [ alignRight, paddingEach { top = 0, bottom = 0, left = 0, right = model.fontSize } ] <|
+        el [] <|
             text <|
                 String.fromFloat ingredient.quantity.amount
 
@@ -270,9 +274,38 @@ ingredientTableItemQuantityUnit ingredient =
             D.stringFromRecipeUnit ingredient.quantity.unit
 
 
-recipeInstructions : D.Recipe -> Element M.Msg
-recipeInstructions _ =
-    Element.none
+recipeInstructions : M.Model -> D.Recipe -> Element M.Msg
+recipeInstructions model recipe =
+    column [ width fill ]
+        [ el [ paddingEach { top = model.fontSize // 2, bottom = 0, left = 0, right = 0 } ] <| text "Instructions"
+        , el [ width fill, paddingXY 0 (model.fontSize // 4) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
+        , el [ width fill ] <|
+            table
+                [ scrollbarY
+                , spacingXY 15 4
+                , paddingEach { top = 0, bottom = 4, left = 0, right = 0 }
+                ]
+                { data = recipe.instructions
+                , columns =
+                    [ { header = none
+                      , width = fill
+                      , view = \instruction -> instructionTableItem model instruction
+                      }
+                    ]
+                }
+        ]
+
+
+instructionTableItem : M.Model -> D.Instruction -> Element M.Msg
+instructionTableItem _ instruction =
+    el
+        [ mouseOver [ Background.color C.mainContentHighlightColor ]
+
+        --, Events.onClick (M.DisplayRecipeDetails recipe)
+        ]
+    <|
+        el [] <|
+            text instruction.instruction
 
 
 recipeComments : D.Recipe -> Element M.Msg
@@ -284,9 +317,9 @@ addRecipeInput : M.Model -> Element M.Msg
 addRecipeInput model =
     el
         [ width fill
-        , Border.width 1
-        , Border.rounded 4
-        , paddingXY 2 2
+        , Background.color C.mainContentSectionBackgroundColor
+        , Border.rounded 6
+        , paddingXY 5 3
         ]
     <|
         Input.text [ width <| maximum 300 fill ]

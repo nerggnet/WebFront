@@ -39,7 +39,7 @@ init flags =
       , mealsUrl = decodedFlags.mealsUrl
       , width = decodedFlags.width
       , height = decodedFlags.height
-      , fontSize = decodedFlags.width // 30
+      , fontSize = max (min (decodedFlags.width // 32) 32) 16
       }
     , Cmd.none
     )
@@ -71,7 +71,7 @@ update : M.Msg -> M.Model -> ( M.Model, Cmd M.Msg )
 update msg model =
     case msg of
         M.ViewportChange width height ->
-            ( { model | width = width, height = height, fontSize = width // 30 }, Cmd.none )
+            ( { model | width = width, height = height, fontSize = max (min (width // 32) 32) 16 }, Cmd.none )
 
         M.DisplayTitle ->
             ( { model | page = M.TitlePage, recipeToFocus = Nothing, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
