@@ -117,3 +117,38 @@ type alias Menu =
     { name : MenuName
     , items : List MenuItem
     }
+
+
+
+---- HELPER FUNCTIONS ----
+
+
+stringFromRecipeUnit : RecipeUnit -> String
+stringFromRecipeUnit unit =
+    case unit of
+        Piece ->
+            "Piece"
+
+        Teaspoon ->
+            "Teaspoon"
+
+        Tablespoon ->
+            "Tablespoon"
+
+        Deciliter ->
+            "Deciliter"
+
+        Liter ->
+            "Liter"
+
+        Gram ->
+            "Gram"
+
+        Hectogram ->
+            "Hectogram"
+
+        Kilogram ->
+            "Kilogram"
+
+        _ ->
+            "NotDefined"

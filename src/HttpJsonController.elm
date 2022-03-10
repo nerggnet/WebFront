@@ -324,37 +324,7 @@ quantityEncoder : D.Quantity -> JE.Value
 quantityEncoder quantity =
     JE.object
         [ ( "Amount", JE.float quantity.amount )
-        , ( "Unit"
-          , JE.string
-                (case quantity.unit of
-                    D.Piece ->
-                        "Piece"
-
-                    D.Teaspoon ->
-                        "Teaspoon"
-
-                    D.Tablespoon ->
-                        "Tablespoon"
-
-                    D.Deciliter ->
-                        "Deciliter"
-
-                    D.Liter ->
-                        "Liter"
-
-                    D.Gram ->
-                        "Gram"
-
-                    D.Hectogram ->
-                        "Hectogram"
-
-                    D.Kilogram ->
-                        "Kilogram"
-
-                    _ ->
-                        "NotDefined"
-                )
-          )
+        , ( "Unit", JE.string (D.stringFromRecipeUnit quantity.unit) )
         ]
 
 

@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Events as BE
 import Element exposing (..)
 import Elements as E
 import Html exposing (Html)
@@ -35,22 +36,31 @@ init flags =
       , menuToFocus = Nothing
       , userText = ""
       , footerMessage = ""
-      , flags = decodedFlags
+      , mealsUrl = decodedFlags.mealsUrl
+      , width = decodedFlags.width
+      , height = decodedFlags.height
+      , fontSize = decodedFlags.width // 30
       }
     , Cmd.none
     )
 
 
-flagsDecoder : JD.Decoder M.Flags
+flagsDecoder : JD.Decoder Flags
 flagsDecoder =
-    JD.map2 M.Flags
+    JD.map4 Flags
         (JD.field "environment" JD.string)
         (JD.field "mealsUrl" JD.string)
+        (JD.field "width" JD.int)
+        (JD.field "height" JD.int)
 
 
-emptyFlags : M.Flags
+emptyFlags : Flags
 emptyFlags =
-    { environment = "", mealsUrl = "" }
+    { environment = "", mealsUrl = "", width = 0, height = 0 }
+
+
+type alias Flags =
+    { environment : String, mealsUrl : String, width : Int, height : Int }
 
 
 
@@ -60,6 +70,9 @@ emptyFlags =
 update : M.Msg -> M.Model -> ( M.Model, Cmd M.Msg )
 update msg model =
     case msg of
+        M.ViewportChange width height ->
+            ( { model | width = width, height = height, fontSize = width // 30 }, Cmd.none )
+
         M.DisplayTitle ->
             ( { model | page = M.TitlePage, recipeToFocus = Nothing, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
 
@@ -206,7 +219,7 @@ expectJson_ toMsg decoder =
 postFindRecipes : M.Model -> Cmd M.Msg
 postFindRecipes model =
     Http.post
-        { url = model.flags.mealsUrl
+        { url = model.mealsUrl
         , body = Http.jsonBody <| H.findRecipeEncoder model.recipeNameToFind
         , expect = Http.expectJson M.GotRecipes H.responseDecoder
         }
@@ -215,7 +228,7 @@ postFindRecipes model =
 postGetAllRecipes : M.Model -> Cmd M.Msg
 postGetAllRecipes model =
     Http.post
-        { url = model.flags.mealsUrl
+        { url = model.mealsUrl
         , body = Http.jsonBody <| H.getAllRecipesEncoder
         , expect = expectJson_ M.GotRecipes H.responseDecoder
         }
@@ -226,7 +239,7 @@ postInsertRecipe model =
     case model.recipeToInsert of
         Just recipe ->
             Http.post
-                { url = model.flags.mealsUrl
+                { url = model.mealsUrl
                 , body = Http.jsonBody <| H.insertRecipeEncoder recipe
                 , expect = Http.expectJson M.GotInsertRecipeResponse H.responseDecoder
                 }
@@ -238,7 +251,7 @@ postInsertRecipe model =
 postGetAllMenus : M.Model -> Cmd M.Msg
 postGetAllMenus model =
     Http.post
-        { url = model.flags.mealsUrl
+        { url = model.mealsUrl
         , body = Http.jsonBody <| H.getAllMenusEncoder
         , expect = expectJson_ M.GotMenus H.responseDecoder
         }
@@ -263,6 +276,17 @@ view model =
 
 
 
+---- SUBSCRIPTIONS ----
+
+
+subscriptions : M.Model -> Sub M.Msg
+subscriptions _ =
+    BE.onResize <|
+        \width height ->
+            M.ViewportChange width height
+
+
+
 ---- MAIN ----
 
 
@@ -272,5 +296,5 @@ main =
         { view = view
         , init = init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }

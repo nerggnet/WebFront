@@ -90,71 +90,74 @@ mainContent model =
         , Border.width 2
         , Border.color C.mainContentBorderColor
         , Background.color C.mainContentBackgroundColor
+        , Font.size <| model.fontSize
         ]
     <|
         case model.page of
             M.TitlePage ->
-                renderBlankPage
+                blankPage
 
             M.RecipesPage ->
                 column
                     [ width fill ]
-                    [ renderRecipeSelector model
-                    , renderRecipeDetails model
-                    , renderAddRecipeInput model
+                    [ recipeSelector model
+                    , recipeDetails model
+                    , addRecipeInput model
                     ]
 
             M.MenusPage ->
                 column
                     [ width fill ]
-                    [ renderMenuSelector model
-                    , renderMenuDetails model
+                    [ menuSelector model
+                    , menuDetails model
                     ]
 
             M.AboutPage ->
                 column
                     [ width fill, height fill ]
-                    [ renderAboutPage model ]
+                    [ aboutPage model ]
 
 
-renderBlankPage : Element M.Msg
-renderBlankPage =
+blankPage : Element M.Msg
+blankPage =
     el [] Element.none
 
 
-renderRecipeSelector : M.Model -> Element M.Msg
-renderRecipeSelector model =
+recipeSelector : M.Model -> Element M.Msg
+recipeSelector model =
     column
-        [ Border.width 1
+        [ width fill
+        , Border.width 1
         , Border.rounded 4
         , paddingXY 2 3
         ]
         [ row []
-            [ el [ Font.italic, Border.widthEach { top = 0, bottom = 1, right = 0, left = 0 } ] <| text "Recipe name"
+            [ el [ Font.italic, Font.underline ] <| text "Recipe name"
             ]
         , el [] <|
             table
                 [ scrollbarY
                 , spacing 4
+                , paddingEach { top = 2, bottom = 4, left = 0, right = 0 }
                 ]
                 { data = model.recipes
                 , columns =
                     [ { header = none
-                      , width = maximum 500 fill
-                      , view = \recipe -> renderRecipeListItem recipe
+                      , width = fill
+                      , view = \recipe -> recipeListItem recipe
                       }
                     ]
                 }
         ]
 
 
-renderRecipeListItem : D.Recipe -> Element M.Msg
-renderRecipeListItem recipe =
-    el [ mouseOver [ Background.color C.selectorItemHighlightColor ], Events.onClick (M.DisplayRecipeDetails recipe) ] <| text recipe.name
+recipeListItem : D.Recipe -> Element M.Msg
+recipeListItem recipe =
+    el [ mouseOver [ Background.color C.mainContentHighlightColor ], Events.onClick (M.DisplayRecipeDetails recipe) ] <| text recipe.name
 
 
-renderRecipeDetails : M.Model -> Element M.Msg
-renderRecipeDetails model =
+recipeDetails : M.Model -> Element M.Msg
+recipeDetails model =
     case model.recipeToFocus of
         Nothing ->
             Element.none
@@ -166,15 +169,15 @@ renderRecipeDetails model =
                 , Border.rounded 4
                 , paddingXY 2 3
                 ]
-                [ renderRecipeBaseInfo recipe
-                , renderRecipeIngredients recipe
-                , renderRecipeInstructions recipe
-                , renderRecipeComments recipe
+                [ recipeBaseInfo model recipe
+                , recipeIngredients model recipe
+                , recipeInstructions recipe
+                , recipeComments recipe
                 ]
 
 
-renderRecipeBaseInfo : D.Recipe -> Element M.Msg
-renderRecipeBaseInfo recipe =
+recipeBaseInfo : M.Model -> D.Recipe -> Element M.Msg
+recipeBaseInfo model recipe =
     let
         recipeLink =
             case recipe.link of
@@ -183,31 +186,102 @@ renderRecipeBaseInfo recipe =
 
                 Nothing ->
                     "#"
+
+        headerFontSize =
+            round <| toFloat model.fontSize * 1.3
     in
-    column []
-        [ el [ Font.size 24 ] <| text recipe.name
+    paragraph []
+        [ el [ Font.size headerFontSize ] <| text recipe.name
+        , el [ paddingXY model.fontSize 0 ] none
+        , el [ width fill, paddingXY (model.fontSize // 2) 0 ] <| el [ width (px 1), height (px model.fontSize), Background.color C.mainContentDividerColor ] none
         , el [] <| text <| "No. of portions: " ++ String.fromInt recipe.portions
+        , el [ width fill, paddingXY (model.fontSize // 2) 0 ] <| el [ width (px 1), height (px model.fontSize), Background.color C.mainContentDividerColor ] none
         , el [] <| newTabLink [ Font.underline, Font.color C.linkColor ] { url = recipeLink, label = text "Recipe link" }
         ]
 
 
-renderRecipeIngredients : D.Recipe -> Element M.Msg
-renderRecipeIngredients _ =
+recipeIngredients : M.Model -> D.Recipe -> Element M.Msg
+recipeIngredients model recipe =
+    let
+        headerFontSize =
+            round <| toFloat model.fontSize * 1.3
+    in
+    column []
+        [ el [ Font.size headerFontSize, paddingEach { top = (model.fontSize // 2), bottom = 0, left = 0, right = 0 } ] <| text "Ingredients"
+        , el [ width fill, paddingXY 0 (model.fontSize // 4) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
+        , el [] <|
+            table
+                [ scrollbarY
+                , spacingXY 15 4
+                , paddingEach { top = 0, bottom = 4, left = 0, right = 0 }
+                ]
+                { data = recipe.ingredients
+                , columns =
+                    [ { header = el [ Font.italic, Font.underline ] <| text "Product name"
+                      , width = fillPortion 4
+                      , view = \ingredient -> ingredientTableItemProductName ingredient
+                      }
+                    , { header = el [ Font.italic, Font.underline ] <| text "Quantity"
+                      , width = fillPortion 1
+                      , view = \ingredient -> ingredientTableItemQuantityAmount model ingredient
+                      }
+                    , { header = el [ Font.italic, Font.underline ] <| text "Unit"
+                      , width = fillPortion 1
+                      , view = \ingredient -> ingredientTableItemQuantityUnit ingredient
+                      }
+                    ]
+                }
+        ]
+
+
+ingredientTableItemProductName : D.Ingredient -> Element M.Msg
+ingredientTableItemProductName ingredient =
+    el
+        [ mouseOver [ Background.color C.mainContentHighlightColor ]
+
+        --, Events.onClick (M.DisplayRecipeDetails recipe)
+        ]
+    <|
+        text ingredient.product.name
+
+
+ingredientTableItemQuantityAmount : M.Model -> D.Ingredient -> Element M.Msg
+ingredientTableItemQuantityAmount model ingredient =
+    el
+        [ mouseOver [ Background.color C.mainContentHighlightColor ]
+
+        --, Events.onClick (M.DisplayRecipeDetails recipe)
+        ]
+    <|
+        el [ alignRight, paddingEach { top = 0, bottom = 0, left = 0, right = model.fontSize } ] <|
+            text <|
+                String.fromFloat ingredient.quantity.amount
+
+
+ingredientTableItemQuantityUnit : D.Ingredient -> Element M.Msg
+ingredientTableItemQuantityUnit ingredient =
+    el
+        [ mouseOver [ Background.color C.mainContentHighlightColor ]
+
+        --, Events.onClick (M.DisplayRecipeDetails recipe)
+        ]
+    <|
+        text <|
+            D.stringFromRecipeUnit ingredient.quantity.unit
+
+
+recipeInstructions : D.Recipe -> Element M.Msg
+recipeInstructions _ =
     Element.none
 
 
-renderRecipeInstructions : D.Recipe -> Element M.Msg
-renderRecipeInstructions _ =
+recipeComments : D.Recipe -> Element M.Msg
+recipeComments _ =
     Element.none
 
 
-renderRecipeComments : D.Recipe -> Element M.Msg
-renderRecipeComments _ =
-    Element.none
-
-
-renderAddRecipeInput : M.Model -> Element M.Msg
-renderAddRecipeInput model =
+addRecipeInput : M.Model -> Element M.Msg
+addRecipeInput model =
     el
         [ width fill
         , Border.width 1
@@ -223,8 +297,8 @@ renderAddRecipeInput model =
             }
 
 
-renderMenuSelector : M.Model -> Element M.Msg
-renderMenuSelector model =
+menuSelector : M.Model -> Element M.Msg
+menuSelector model =
     column
         [ Border.width 1
         , Border.rounded 4
@@ -242,20 +316,20 @@ renderMenuSelector model =
                 , columns =
                     [ { header = none
                       , width = maximum 500 fill
-                      , view = \menu -> renderMenuListItem menu
+                      , view = \menu -> menuListItem menu
                       }
                     ]
                 }
         ]
 
 
-renderMenuListItem : D.Menu -> Element M.Msg
-renderMenuListItem menu =
-    el [ mouseOver [ Background.color C.selectorItemHighlightColor ], Events.onClick (M.DisplayMenuDetails menu) ] <| text menu.name
+menuListItem : D.Menu -> Element M.Msg
+menuListItem menu =
+    el [ mouseOver [ Background.color C.mainContentHighlightColor ], Events.onClick (M.DisplayMenuDetails menu) ] <| text menu.name
 
 
-renderMenuDetails : M.Model -> Element M.Msg
-renderMenuDetails model =
+menuDetails : M.Model -> Element M.Msg
+menuDetails model =
     case model.menuToFocus of
         Nothing ->
             Element.none
@@ -267,19 +341,19 @@ renderMenuDetails model =
                 , Border.rounded 4
                 , paddingXY 2 3
                 ]
-                [ renderMenuBaseInfo menu
+                [ menuBaseInfo menu
                 ]
 
 
-renderMenuBaseInfo : D.Menu -> Element M.Msg
-renderMenuBaseInfo menu =
+menuBaseInfo : D.Menu -> Element M.Msg
+menuBaseInfo menu =
     column []
         [ el [ Font.size 24 ] <| text menu.name
         ]
 
 
-renderAboutPage : M.Model -> Element M.Msg
-renderAboutPage _ =
+aboutPage : M.Model -> Element M.Msg
+aboutPage _ =
     column
         [ width fill
         , height fill

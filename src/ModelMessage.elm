@@ -16,7 +16,10 @@ type alias Model =
     , menuToFocus : Maybe D.Menu
     , userText : String
     , footerMessage : String
-    , flags : Flags
+    , mealsUrl : String
+    , width : Int
+    , height : Int
+    , fontSize : Int
     }
 
 
@@ -27,12 +30,9 @@ type Page
     | AboutPage
 
 
-type alias Flags =
-    { environment : String, mealsUrl : String }
-
-
 type Msg
-    = DisplayTitle
+    = ViewportChange Int Int
+    | DisplayTitle
     | DisplayAbout
     | FindRecipes String
     | FindRecipesExecute

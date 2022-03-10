@@ -77,8 +77,8 @@ mainContentDividerColor =
     evenDarkerGreenishColor
 
 
-selectorItemHighlightColor : Color
-selectorItemHighlightColor =
+mainContentHighlightColor : Color
+mainContentHighlightColor =
     greenishColor
 
 
