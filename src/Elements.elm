@@ -71,11 +71,11 @@ leftList =
     column
         [ Border.widthEach { top = 0, bottom = 0, left = 0, right = 1 }
         , height fill
-        , spacing 2
-        , paddingXY 2 2
+        , spacing 4
+        , paddingXY 4 4
         , Border.color C.leftListBorderColor
         , Background.color C.leftListBackgroundColor
-        , Font.size 18
+        , Font.size 20
         ]
         [ listItem "Recipes" M.LoadRecipes
         , listItem "Menus" M.LoadMenus
@@ -180,7 +180,7 @@ recipeDetails model =
                 [ recipeBaseInfo model recipe
                 , recipeIngredients model recipe
                 , recipeInstructions model recipe
-                , recipeComments recipe
+                , recipeComments model recipe
                 ]
 
 
@@ -197,22 +197,28 @@ recipeBaseInfo model recipe =
 
         headerFontSize =
             round <| toFloat model.fontSize * 1.3
+        infoFontSize =
+            round <| toFloat model.fontSize * 0.7
     in
-    paragraph [ width fill ]
-        [ el [ Font.size headerFontSize ] <| text recipe.name
-        , el [ paddingXY model.fontSize 0 ] none
-        , el [ width fill, paddingXY (model.fontSize // 2) 0 ] <| el [ width (px 1), height (px model.fontSize), Background.color C.mainContentDividerColor ] none
-        , el [] <| text <| "No. of portions: " ++ String.fromInt recipe.portions
-        , el [ width fill, paddingXY (model.fontSize // 2) 0 ] <| el [ width (px 1), height (px model.fontSize), Background.color C.mainContentDividerColor ] none
-        , el [] <| newTabLink [ Font.underline, Font.color C.linkColor ] { url = recipeLink, label = text "Recipe link" }
+    column [ width fill ]
+        [ paragraph [ width fill ] [ el [ Font.size headerFontSize ] <| text recipe.name ]
+        , paragraph [ width fill ]
+            [ el [ Font.size infoFontSize ] <| text <| "No. of portions: " ++ String.fromInt recipe.portions
+            , el [ width fill, paddingXY (model.fontSize // 3) 0 ] <| el [ width (px 1), height (px (model.fontSize // 2)), Background.color C.mainContentDividerColor ] none
+            , el [ Font.size infoFontSize ] <| newTabLink [ Font.underline, Font.color C.linkColor ] { url = recipeLink, label = text "Recipe link" }
+            ]
         ]
 
 
 recipeIngredients : M.Model -> D.Recipe -> Element M.Msg
 recipeIngredients model recipe =
+    let
+        headerFontSize =
+            round <| toFloat model.fontSize * 0.7
+    in
     column [ width fill ]
-        [ el [ paddingEach { top = model.fontSize // 2, bottom = 0, left = 0, right = 0 } ] <| text "Ingredients"
-        , el [ width fill, paddingXY 0 (model.fontSize // 4) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
+        [ el [ Font.bold, Font.size headerFontSize, paddingEach { top = model.fontSize // 2, bottom = 0, left = 0, right = 0 } ] <| text "Ingredients"
+        , el [ width fill, paddingXY 0 (model.fontSize // 16) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
         , el [ width fill ] <|
             table
                 [ scrollbarY
@@ -276,9 +282,13 @@ ingredientTableItemQuantityUnit ingredient =
 
 recipeInstructions : M.Model -> D.Recipe -> Element M.Msg
 recipeInstructions model recipe =
+    let
+        headerFontSize =
+            round <| toFloat model.fontSize * 0.7
+    in
     column [ width fill ]
-        [ el [ paddingEach { top = model.fontSize // 2, bottom = 0, left = 0, right = 0 } ] <| text "Instructions"
-        , el [ width fill, paddingXY 0 (model.fontSize // 4) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
+        [ el [ Font.bold, Font.size headerFontSize, paddingEach { top = model.fontSize // 2, bottom = 0, left = 0, right = 0 } ] <| text "Instructions"
+        , el [ width fill, paddingXY 0 (model.fontSize // 16) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
         , el [ width fill ] <|
             table
                 [ scrollbarY
@@ -298,19 +308,56 @@ recipeInstructions model recipe =
 
 instructionTableItem : M.Model -> D.Instruction -> Element M.Msg
 instructionTableItem _ instruction =
-    el
+    paragraph
         [ mouseOver [ Background.color C.mainContentHighlightColor ]
 
         --, Events.onClick (M.DisplayRecipeDetails recipe)
         ]
-    <|
-        el [] <|
+        [ el [] <|
+            text "• "
+        , el [] <|
             text instruction.instruction
+        ]
 
 
-recipeComments : D.Recipe -> Element M.Msg
-recipeComments _ =
-    Element.none
+recipeComments : M.Model -> D.Recipe -> Element M.Msg
+recipeComments model recipe =
+    let
+        headerFontSize =
+            round <| toFloat model.fontSize * 0.7
+    in
+    column [ width fill ]
+        [ el [ Font.bold, Font.size headerFontSize, paddingEach { top = model.fontSize // 2, bottom = 0, left = 0, right = 0 } ] <| text "Comments"
+        , el [ width fill, paddingXY 0 (model.fontSize // 16) ] <| el [ width fill, height (px 1), Background.color C.mainContentDividerColor ] none
+        , el [ width fill ] <|
+            table
+                [ scrollbarY
+                , spacingXY 15 4
+                , paddingEach { top = 0, bottom = 4, left = 0, right = 0 }
+                ]
+                { data = recipe.comments
+                , columns =
+                    [ { header = none
+                      , width = fill
+                      , view = \comment -> commentTableItem model comment
+                      }
+                    ]
+                }
+        ]
+
+
+commentTableItem : M.Model -> D.Comment -> Element M.Msg
+commentTableItem _ comment =
+    paragraph
+        [ mouseOver [ Background.color C.mainContentHighlightColor ]
+
+        --, Events.onClick (M.DisplayRecipeDetails recipe)
+        ]
+        [ el [] <|
+            text "• "
+        , el [] <|
+            text comment.comment
+        ]
 
 
 addRecipeInput : M.Model -> Element M.Msg
