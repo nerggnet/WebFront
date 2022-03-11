@@ -342,6 +342,17 @@ commentEncoder comment =
         ]
 
 
+updateRecipeBaseInfoEncoder : D.Recipe -> D.RecipeName -> D.Portions -> D.HttpLink -> JE.Value
+updateRecipeBaseInfoEncoder recipe recipeName portions httpLink =
+    JE.object
+        [ ( "Action", JE.string "ChangeRecipeBaseInfo" )
+        , ( "RecipeName", JE.string recipe.name )
+        , ( "NewRecipeName", JE.string recipeName )
+        , ( "Portions", JE.int portions )
+        , ( "Link", JE.string httpLink )
+        ]
+
+
 getAllMenusEncoder : JE.Value
 getAllMenusEncoder =
     JE.object

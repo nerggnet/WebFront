@@ -2,12 +2,13 @@ module Main exposing (main)
 
 import Browser
 import Browser.Events as BE
+import Domain as D
 import Element exposing (..)
-import Elements as E
 import Html exposing (Html)
 import Http
 import HttpJsonController as H
 import Json.Decode as JD
+import TopElements as TE
 import ModelMessage as M
 
 
@@ -31,6 +32,7 @@ init flags =
       , recipeNameToFind = ""
       , recipeToInsert = Nothing
       , recipeToFocus = Nothing
+      , editRecipeBaseInfo = False
       , menus = []
       , menuNameToFind = ""
       , menuToFocus = Nothing
@@ -74,10 +76,10 @@ update msg model =
             ( { model | width = width, height = height, fontSize = max (min (width // 32) 32) 16 }, Cmd.none )
 
         M.DisplayTitle ->
-            ( { model | page = M.TitlePage, recipeToFocus = Nothing, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
+            ( { model | page = M.TitlePage, recipeToFocus = Nothing, editRecipeBaseInfo = False, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
 
         M.DisplayAbout ->
-            ( { model | page = M.AboutPage, recipeToFocus = Nothing, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
+            ( { model | page = M.AboutPage, recipeToFocus = Nothing, editRecipeBaseInfo = False, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
 
         M.FindRecipes name ->
             update M.FindRecipesExecute { model | recipeNameToFind = name }
@@ -147,6 +149,34 @@ update msg model =
         M.DisplayRecipeDetails recipe ->
             ( { model | recipeToFocus = Just recipe }, Cmd.none )
 
+        M.ChangeRecipeBaseInfo ->
+            ( { model | editRecipeBaseInfo = True }, Cmd.none )
+
+        M.UpdateRecipeBaseInfo recipeName portions httpLink ->
+            ( { model | editRecipeBaseInfo = False }, postUpdateRecipeBaseInfo model recipeName portions httpLink )
+
+        M.GotUpdateRecipeBaseInfoResponse result ->
+            case result of
+                Ok response ->
+                    let
+                        newFooterMessage =
+                            case response.message of
+                                Just message ->
+                                    message
+
+                                Nothing ->
+                                    ""
+                    in
+                    ( { model | footerMessage = newFooterMessage }, Cmd.none )
+
+                Err httpError ->
+                    case httpError of
+                        Http.BadBody badBodyMsg ->
+                            ( { model | footerMessage = badBodyMsg }, Cmd.none )
+
+                        _ ->
+                            ( { model | footerMessage = "Unknown Error" }, Cmd.none )
+
         M.LoadMenus ->
             update M.LoadMenusExecute { model | menuNameToFind = "" }
 
@@ -154,7 +184,7 @@ update msg model =
             ( model, postGetAllMenus model )
 
         M.DisplayMenus ->
-            ( { model | page = M.MenusPage }, Cmd.none )
+            ( { model | page = M.MenusPage, editRecipeBaseInfo = False }, Cmd.none )
 
         M.UserTypedText text ->
             ( { model | userText = text }, Cmd.none )
@@ -257,6 +287,20 @@ postGetAllMenus model =
         }
 
 
+postUpdateRecipeBaseInfo : M.Model -> D.RecipeName -> D.Portions -> D.HttpLink -> Cmd M.Msg
+postUpdateRecipeBaseInfo model recipeName portions httpLink =
+    case model.recipeToFocus of
+        Just recipe ->
+            Http.post
+                { url = model.mealsUrl
+                , body = Http.jsonBody <| H.updateRecipeBaseInfoEncoder recipe recipeName portions httpLink
+                , expect = expectJson_ M.GotUpdateRecipeBaseInfoResponse H.responseDecoder
+                }
+
+        Nothing ->
+            Cmd.none
+
+
 
 ---- VIEW ----
 
@@ -269,9 +313,9 @@ view model =
             , height fill
             , spacing 0
             ]
-            [ E.header
-            , E.middle model
-            , E.footer model
+            [ TE.header
+            , TE.middle model
+            , TE.footer model
             ]
 
 
