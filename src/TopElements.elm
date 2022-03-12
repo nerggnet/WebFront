@@ -33,6 +33,7 @@ homeButton =
         [ Font.size 24
         , paddingXY 3 3
         , Border.rounded 4
+        , pointer
         , mouseOver [ Background.color C.headerHighlightColor ]
         , Events.onClick M.DisplayTitle
         ]
@@ -46,6 +47,7 @@ aboutButton =
         [ Font.size 24
         , paddingXY 3 3
         , Border.rounded 4
+        , pointer
         , mouseOver [ Background.color C.headerHighlightColor ]
         , Events.onClick M.DisplayAbout
         ]

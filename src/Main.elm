@@ -8,8 +8,8 @@ import Html exposing (Html)
 import Http
 import HttpJsonController as H
 import Json.Decode as JD
-import TopElements as TE
 import ModelMessage as M
+import TopElements as TE
 
 
 
@@ -33,6 +33,7 @@ init flags =
       , recipeToInsert = Nothing
       , recipeToFocus = Nothing
       , editRecipeBaseInfo = False
+      , recipeIngredientToEdit = Nothing
       , menus = []
       , menuNameToFind = ""
       , menuToFocus = Nothing
@@ -176,6 +177,9 @@ update msg model =
 
                         _ ->
                             ( { model | footerMessage = "Unknown Error" }, Cmd.none )
+
+        M.ChangeRecipeIngredient ingredient ->
+            ( { model | recipeIngredientToEdit = Just ingredient }, Cmd.none )
 
         M.LoadMenus ->
             update M.LoadMenusExecute { model | menuNameToFind = "" }

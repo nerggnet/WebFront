@@ -1,6 +1,7 @@
 module RecipeElements exposing (..)
 
 import Colors as C
+import CommonElements as CE
 import Domain as D
 import Element exposing (..)
 import Element.Background as Background
@@ -87,7 +88,8 @@ recipeBaseInfo model recipe =
             [ el [ Font.size infoFontSize ] <| text <| "No. of portions: " ++ String.fromInt recipe.portions
             , el [ width fill, paddingXY (model.fontSize // 3) 0 ] <| el [ width (px 1), height (px (model.fontSize // 2)), Background.color C.mainContentDividerColor ] none
             , el [ Font.size infoFontSize ] <| newTabLink [ Font.underline, Font.color C.linkColor ] { url = recipeLink, label = text "Recipe link" }
-            , el [] <| Input.button [] { onPress = Just M.ChangeRecipeBaseInfo, label = text "Edit" }
+            , el [ width fill, paddingXY (model.fontSize // 3) 0 ] <| el [ width (px 1), height (px (model.fontSize // 2)), Background.color C.mainContentDividerColor ] none
+            , el [] <| CE.editButton model M.ChangeRecipeBaseInfo
             ]
         ]
 
@@ -110,16 +112,20 @@ recipeIngredients model recipe =
                 { data = recipe.ingredients
                 , columns =
                     [ { header = el [ Font.italic, Font.underline ] <| text "Product"
-                      , width = fillPortion 4
+                      , width = fillPortion 20
                       , view = \ingredient -> ingredientTableItemProductName ingredient
                       }
                     , { header = el [ Font.italic, Font.underline ] <| text "Quantity"
-                      , width = fillPortion 1
+                      , width = fillPortion 4
                       , view = \ingredient -> ingredientTableItemQuantityAmount model ingredient
                       }
                     , { header = el [ Font.italic, Font.underline ] <| text "Unit"
-                      , width = fillPortion 1
+                      , width = fillPortion 4
                       , view = \ingredient -> ingredientTableItemQuantityUnit ingredient
+                      }
+                    , { header = CE.addButton model M.ChangeRecipeBaseInfo
+                      , width = fillPortion 1
+                      , view = \ingredient -> CE.editButton model <| M.ChangeRecipeIngredient ingredient
                       }
                     ]
                 }

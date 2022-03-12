@@ -12,6 +12,7 @@ type alias Model =
     , recipeToInsert : Maybe D.Recipe
     , recipeToFocus : Maybe D.Recipe
     , editRecipeBaseInfo : Bool
+    , recipeIngredientToEdit : Maybe D.Ingredient
     , menus : List D.Menu
     , menuNameToFind : D.MenuName
     , menuToFocus : Maybe D.Menu
@@ -48,6 +49,7 @@ type Msg
     | ChangeRecipeBaseInfo
     | UpdateRecipeBaseInfo D.RecipeName D.Portions D.HttpLink
     | GotUpdateRecipeBaseInfoResponse (Result Http.Error H.ResponseJson)
+    | ChangeRecipeIngredient D.Ingredient
     | LoadMenus
     | LoadMenusExecute
     | GotMenus (Result Http.Error H.ResponseJson)
