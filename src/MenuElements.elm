@@ -1,4 +1,4 @@
-module MenuElements exposing (..)
+module MenuElements exposing (menusPage)
 
 import Colors as C
 import Domain as D
@@ -8,6 +8,15 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import ModelMessage as M
+
+
+menusPage : M.Model -> Element M.Msg
+menusPage model =
+    column
+        [ width fill ]
+        [ menuSelector model
+        , menuDetails model
+        ]
 
 
 menuSelector : M.Model -> Element M.Msg

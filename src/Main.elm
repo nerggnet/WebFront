@@ -33,6 +33,7 @@ init flags =
       , recipeToInsert = Nothing
       , recipeToFocus = Nothing
       , editRecipeBaseInfo = False
+      , showAddIngredientInput = False
       , recipeIngredientToEdit = Nothing
       , menus = []
       , menuNameToFind = ""
@@ -46,6 +47,10 @@ init flags =
       }
     , Cmd.none
     )
+
+
+
+---- FLAGS ----
 
 
 flagsDecoder : JD.Decoder Flags
@@ -77,10 +82,10 @@ update msg model =
             ( { model | width = width, height = height, fontSize = max (min (width // 32) 32) 16 }, Cmd.none )
 
         M.DisplayTitle ->
-            ( { model | page = M.TitlePage, recipeToFocus = Nothing, editRecipeBaseInfo = False, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
+            ( { model | page = M.TitlePage, recipeToFocus = Nothing, editRecipeBaseInfo = False, showAddIngredientInput = False, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
 
         M.DisplayAbout ->
-            ( { model | page = M.AboutPage, recipeToFocus = Nothing, editRecipeBaseInfo = False, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
+            ( { model | page = M.AboutPage, recipeToFocus = Nothing, editRecipeBaseInfo = False, showAddIngredientInput = False, menuToFocus = Nothing, footerMessage = "" }, Cmd.none )
 
         M.FindRecipes name ->
             update M.FindRecipesExecute { model | recipeNameToFind = name }
@@ -148,10 +153,10 @@ update msg model =
             ( { model | page = M.RecipesPage }, Cmd.none )
 
         M.DisplayRecipeDetails recipe ->
-            ( { model | recipeToFocus = Just recipe }, Cmd.none )
+            ( { model | recipeToFocus = Just recipe, showAddIngredientInput = False }, Cmd.none )
 
         M.ChangeRecipeBaseInfo ->
-            ( { model | editRecipeBaseInfo = True }, Cmd.none )
+            ( { model | editRecipeBaseInfo = True, showAddIngredientInput = False }, Cmd.none )
 
         M.UpdateRecipeBaseInfo recipeName portions httpLink ->
             ( { model | editRecipeBaseInfo = False }, postUpdateRecipeBaseInfo model recipeName portions httpLink )
@@ -179,10 +184,13 @@ update msg model =
                             ( { model | footerMessage = "Unknown Error" }, Cmd.none )
 
         M.ChangeRecipeIngredient ingredient ->
-            ( { model | recipeIngredientToEdit = Just ingredient }, Cmd.none )
+            ( { model | recipeIngredientToEdit = Just ingredient, showAddIngredientInput = False }, Cmd.none )
+
+        M.DisplayAddIngredientToRecipe ->
+            ( { model | showAddIngredientInput = True }, Cmd.none )
 
         M.LoadMenus ->
-            update M.LoadMenusExecute { model | menuNameToFind = "" }
+            update M.LoadMenusExecute { model | menuNameToFind = "", showAddIngredientInput = False }
 
         M.LoadMenusExecute ->
             ( model, postGetAllMenus model )
@@ -217,6 +225,10 @@ update msg model =
 
         M.DisplayMenuDetails menu ->
             ( { model | menuToFocus = Just menu }, Cmd.none )
+
+
+
+---- HTTP HELPERS ----
 
 
 expectJson_ : (Result Http.Error a -> msg) -> JD.Decoder a -> Http.Expect msg

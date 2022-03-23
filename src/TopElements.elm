@@ -1,4 +1,4 @@
-module TopElements exposing (..)
+module TopElements exposing (header, middle, footer)
 
 import Colors as C
 import Element exposing (..)
@@ -115,29 +115,10 @@ mainContent model =
                 blankPage
 
             M.RecipesPage ->
-                let
-                    smallBoxSpacing =
-                        px (model.fontSize // 4)
-
-                    bigBoxSpacing =
-                        px (model.fontSize // 2)
-                in
-                column
-                    [ width fill ]
-                    [ el [ width fill, height smallBoxSpacing ] none
-                    , row [ width fill ] [ el [ width smallBoxSpacing ] none, RE.recipeSelector model, el [ width smallBoxSpacing ] none ]
-                    , el [ width fill, height bigBoxSpacing ] none
-                    , row [ width fill ] [ el [ width smallBoxSpacing ] none, RE.recipeDetails model, el [ width smallBoxSpacing ] none ]
-                    , el [ width fill, height bigBoxSpacing ] none
-                    , row [ width fill ] [ el [ width smallBoxSpacing ] none, RE.addRecipeInput model, el [ width smallBoxSpacing ] none ]
-                    ]
+                RE.recipesPage model
 
             M.MenusPage ->
-                column
-                    [ width fill ]
-                    [ ME.menuSelector model
-                    , ME.menuDetails model
-                    ]
+                ME.menusPage model
 
             M.AboutPage ->
                 column

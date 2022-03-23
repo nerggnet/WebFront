@@ -1,4 +1,4 @@
-module RecipeElements exposing (..)
+module RecipeElements exposing (recipesPage)
 
 import Colors as C
 import CommonElements as CE
@@ -10,6 +10,25 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import ModelMessage as M
+
+
+recipesPage : M.Model -> Element M.Msg
+recipesPage model =
+    let
+        smallBoxSpacing =
+            px (model.fontSize // 4)
+
+        bigBoxSpacing =
+            px (model.fontSize // 2)
+    in
+    column
+        [ width fill ]
+        [ el [ width fill, height smallBoxSpacing ] none
+        , row [ width fill ] [ el [ width smallBoxSpacing ] none, recipeSelector model, el [ width smallBoxSpacing ] none ]
+        , el [ width fill, height bigBoxSpacing ] none
+        , row [ width fill ] [ el [ width smallBoxSpacing ] none, recipeDetails model, el [ width smallBoxSpacing ] none ]
+        , addIngredientInput model
+        ]
 
 
 recipeSelector : M.Model -> Element M.Msg
@@ -123,7 +142,7 @@ recipeIngredients model recipe =
                       , width = fillPortion 4
                       , view = \ingredient -> ingredientTableItemQuantityUnit ingredient
                       }
-                    , { header = CE.addButton model M.ChangeRecipeBaseInfo
+                    , { header = CE.addButton model M.DisplayAddIngredientToRecipe
                       , width = fillPortion 1
                       , view = \ingredient -> CE.editButton model <| M.ChangeRecipeIngredient ingredient
                       }
@@ -134,35 +153,17 @@ recipeIngredients model recipe =
 
 ingredientTableItemProductName : D.Ingredient -> Element M.Msg
 ingredientTableItemProductName ingredient =
-    el
-        [-- mouseOver [ Background.color C.mainContentHighlightColor ]
-         --, Events.onClick (M.DisplayRecipeDetails recipe)
-        ]
-    <|
-        text ingredient.product.name
+    el [] <| text ingredient.product.name
 
 
 ingredientTableItemQuantityAmount : M.Model -> D.Ingredient -> Element M.Msg
 ingredientTableItemQuantityAmount _ ingredient =
-    el
-        [-- mouseOver [ Background.color C.mainContentHighlightColor ]
-         --, Events.onClick (M.DisplayRecipeDetails recipe)
-        ]
-    <|
-        el [] <|
-            text <|
-                String.fromFloat ingredient.quantity.amount
+    el [] <| text <| String.fromFloat ingredient.quantity.amount
 
 
 ingredientTableItemQuantityUnit : D.Ingredient -> Element M.Msg
 ingredientTableItemQuantityUnit ingredient =
-    el
-        [-- mouseOver [ Background.color C.mainContentHighlightColor ]
-         --, Events.onClick (M.DisplayRecipeDetails recipe)
-        ]
-    <|
-        text <|
-            D.stringFromRecipeUnit ingredient.quantity.unit
+    el [] <| text <| D.stringFromRecipeUnit ingredient.quantity.unit
 
 
 recipeInstructions : M.Model -> D.Recipe -> Element M.Msg
@@ -193,10 +194,7 @@ recipeInstructions model recipe =
 
 instructionTableItem : M.Model -> D.Instruction -> Element M.Msg
 instructionTableItem _ instruction =
-    paragraph
-        [-- mouseOver [ Background.color C.mainContentHighlightColor ]
-         --, Events.onClick (M.DisplayRecipeDetails recipe)
-        ]
+    paragraph []
         [ el [] <|
             text "• "
         , el [] <|
@@ -232,10 +230,7 @@ recipeComments model recipe =
 
 commentTableItem : M.Model -> D.Comment -> Element M.Msg
 commentTableItem _ comment =
-    paragraph
-        [-- mouseOver [ Background.color C.mainContentHighlightColor ]
-         --, Events.onClick (M.DisplayRecipeDetails recipe)
-        ]
+    paragraph []
         [ el [] <|
             text "• "
         , el [] <|
@@ -243,18 +238,36 @@ commentTableItem _ comment =
         ]
 
 
-addRecipeInput : M.Model -> Element M.Msg
-addRecipeInput model =
-    el
-        [ width fill
-        , Background.color C.mainContentSectionBackgroundColor
-        , Border.rounded 6
-        , paddingXY 5 3
-        ]
-    <|
-        Input.text [ width <| maximum 300 fill ]
-            { onChange = M.UserTypedText
-            , text = model.userText
-            , placeholder = Just <| Input.placeholder [] <| text "Type here"
-            , label = Input.labelAbove [] <| text "Text input"
-            }
+addIngredientInput : M.Model -> Element M.Msg
+addIngredientInput model =
+    if model.showAddIngredientInput then
+        let
+            smallBoxSpacing =
+                px (model.fontSize // 4)
+
+            bigBoxSpacing =
+                px (model.fontSize // 2)
+        in
+        column [ width fill ]
+            [ el [ width fill, height bigBoxSpacing ] none
+            , row [ width fill ]
+                [ el [ width smallBoxSpacing ] none
+                , el
+                    [ width fill
+                    , Background.color C.mainContentSectionBackgroundColor
+                    , Border.rounded 6
+                    , paddingXY 5 3
+                    ]
+                  <|
+                    Input.text [ width <| maximum 300 fill ]
+                        { onChange = M.UserTypedText
+                        , text = model.userText
+                        , placeholder = Just <| Input.placeholder [] <| text "Type here"
+                        , label = Input.labelAbove [] <| text "Text input"
+                        }
+                , el [ width smallBoxSpacing ] none
+                ]
+            ]
+
+    else
+        Element.none

@@ -3,6 +3,7 @@ module ModelMessage exposing (..)
 import Domain as D
 import Http
 import HttpJsonController as H
+import HttpJsonController exposing (Action(..))
 
 
 type alias Model =
@@ -12,6 +13,7 @@ type alias Model =
     , recipeToInsert : Maybe D.Recipe
     , recipeToFocus : Maybe D.Recipe
     , editRecipeBaseInfo : Bool
+    , showAddIngredientInput : Bool
     , recipeIngredientToEdit : Maybe D.Ingredient
     , menus : List D.Menu
     , menuNameToFind : D.MenuName
@@ -50,6 +52,7 @@ type Msg
     | UpdateRecipeBaseInfo D.RecipeName D.Portions D.HttpLink
     | GotUpdateRecipeBaseInfoResponse (Result Http.Error H.ResponseJson)
     | ChangeRecipeIngredient D.Ingredient
+    | DisplayAddIngredientToRecipe
     | LoadMenus
     | LoadMenusExecute
     | GotMenus (Result Http.Error H.ResponseJson)
