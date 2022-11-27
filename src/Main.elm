@@ -3,12 +3,14 @@ module Main exposing (main)
 import Browser
 import Browser.Events as BE
 import Domain as D
+import Dropdown
 import Element exposing (..)
 import Html exposing (Html)
 import Http
 import HttpJsonController as H
 import Json.Decode as JD
 import ModelMessage as M
+import RecipeElements as RE
 import TopElements as TE
 
 
@@ -34,6 +36,8 @@ init flags =
       , recipeToFocus = Nothing
       , editRecipeBaseInfo = False
       , showAddIngredientInput = False
+      , selectedIngredientDropdownState = Dropdown.init "dropdown"
+      , selectedIngredientInDropdown = Nothing
       , recipeIngredientToEdit = Nothing
       , menus = []
       , menuNameToFind = ""
@@ -188,6 +192,16 @@ update msg model =
 
         M.DisplayAddIngredientToRecipe ->
             ( { model | showAddIngredientInput = True }, Cmd.none )
+
+        M.AddIngredientDropdownMsg dropdownMsg ->
+            let
+                ( state, cmd ) =
+                    Dropdown.update (RE.ingredientDropdownConfig model) dropdownMsg model model.selectedIngredientDropdownState
+            in
+            ( { model | selectedIngredientDropdownState = state }, cmd )
+
+        M.AddIngredientDropdownSelectMsg maybeProductName ->
+            ( { model | selectedIngredientInDropdown = maybeProductName }, Cmd.none )
 
         M.LoadMenus ->
             update M.LoadMenusExecute { model | menuNameToFind = "", showAddIngredientInput = False }
