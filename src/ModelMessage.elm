@@ -2,8 +2,7 @@ module ModelMessage exposing (..)
 
 import Domain as D
 import Http
-import HttpJsonController as H
-import HttpJsonController exposing (Action(..))
+import Dropdown
 
 
 type alias Model =
@@ -14,6 +13,8 @@ type alias Model =
     , recipeToFocus : Maybe D.Recipe
     , editRecipeBaseInfo : Bool
     , showAddIngredientInput : Bool
+    , selectedIngredientDropdownState : Dropdown.State D.ProductName
+    , selectedIngredientInDropdown : Maybe D.ProductName
     , recipeIngredientToEdit : Maybe D.Ingredient
     , menus : List D.Menu
     , menuNameToFind : D.MenuName
@@ -40,22 +41,32 @@ type Msg
     | DisplayAbout
     | FindRecipes String
     | FindRecipesExecute
-    | GotRecipes (Result Http.Error H.ResponseJson)
+    | GotRecipes (Result Http.Error ResponseJson)
     | InsertRecipe D.Recipe
     | InsertRecipeExecute
-    | GotInsertRecipeResponse (Result Http.Error H.ResponseJson)
+    | GotInsertRecipeResponse (Result Http.Error ResponseJson)
     | LoadRecipes
     | LoadRecipesExecute
     | DisplayRecipes
     | DisplayRecipeDetails D.Recipe
     | ChangeRecipeBaseInfo
     | UpdateRecipeBaseInfo D.RecipeName D.Portions D.HttpLink
-    | GotUpdateRecipeBaseInfoResponse (Result Http.Error H.ResponseJson)
+    | GotUpdateRecipeBaseInfoResponse (Result Http.Error ResponseJson)
     | ChangeRecipeIngredient D.Ingredient
     | DisplayAddIngredientToRecipe
+    | AddIngredientDropdownMsg (Dropdown.Msg D.ProductName)
+    | AddIngredientDropdownSelectMsg (Maybe D.ProductName)
     | LoadMenus
     | LoadMenusExecute
-    | GotMenus (Result Http.Error H.ResponseJson)
+    | GotMenus (Result Http.Error ResponseJson)
     | DisplayMenus
     | DisplayMenuDetails D.Menu
     | UserTypedText String
+
+
+type alias ResponseJson =
+    { message : Maybe String
+    , recipes : List D.Recipe
+    , menus : List D.Menu
+    , shoppingLists : List D.ShoppingList
+    }

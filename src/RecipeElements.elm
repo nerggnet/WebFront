@@ -1,14 +1,16 @@
-module RecipeElements exposing (recipesPage)
+module RecipeElements exposing (ingredientDropdownConfig, recipesPage)
 
 import Colors as C
 import CommonElements as CE
 import Domain as D
+import Dropdown
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import HelperFunctions as HF
 import ModelMessage as M
 
 
@@ -163,7 +165,7 @@ ingredientTableItemQuantityAmount _ ingredient =
 
 ingredientTableItemQuantityUnit : D.Ingredient -> Element M.Msg
 ingredientTableItemQuantityUnit ingredient =
-    el [] <| text <| D.stringFromRecipeUnit ingredient.quantity.unit
+    el [] <| text <| HF.stringFromRecipeUnit ingredient.quantity.unit
 
 
 recipeInstructions : M.Model -> D.Recipe -> Element M.Msg
@@ -259,15 +261,97 @@ addIngredientInput model =
                     , paddingXY 5 3
                     ]
                   <|
-                    Input.text [ width <| maximum 300 fill ]
-                        { onChange = M.UserTypedText
-                        , text = model.userText
-                        , placeholder = Just <| Input.placeholder [] <| text "Type here"
-                        , label = Input.labelAbove [] <| text "Text input"
-                        }
+                    column [ width fill ]
+                        [ Input.text [ width <| maximum 300 fill ]
+                            { onChange = M.UserTypedText
+                            , text = model.userText
+                            , placeholder = Just <| Input.placeholder [] <| text "Type here"
+                            , label = Input.labelAbove [] <| text "Text input"
+                            }
+                        , Dropdown.view (ingredientDropdownConfig model) model model.selectedIngredientDropdownState
+                        ]
                 , el [ width smallBoxSpacing ] none
                 ]
             ]
 
     else
         Element.none
+
+
+ingredientDropdownConfig : M.Model -> Dropdown.Config D.ProductName M.Msg M.Model
+ingredientDropdownConfig model =
+    let
+        smallPadding =
+            model.fontSize // 4
+
+        containerAttrs =
+            []
+
+        selectAttrs =
+            [ Border.width 1
+            , Border.rounded 5
+            , paddingXY (smallPadding * 2) smallPadding
+            , spacing 10
+            , width fill
+            ]
+
+        searchAttrs =
+            [ Border.width 0, padding 0, width fill ]
+
+        listAttrs =
+            [ Border.width 1
+            , Border.roundEach { topLeft = 0, topRight = 0, bottomLeft = 5, bottomRight = 5 }
+            , width fill
+            , clip
+            , scrollbarY
+            , height (fill |> maximum 200)
+            ]
+
+        itemToPrompt item =
+            text item
+
+        itemToElement selected highlighted i =
+            let
+                bgColor =
+                    if highlighted then
+                        rgb255 128 128 128
+
+                    else if selected then
+                        rgb255 100 100 100
+
+                    else
+                        rgb255 255 255 255
+            in
+            row
+                [ Background.color bgColor
+                , padding smallPadding
+                , spacing 10
+                , width fill
+                ]
+                [ el [] (text "-")
+                , el [] (text i)
+                ]
+
+        emptyListElement =
+            Element.el
+                [ Element.width fill
+                , Element.padding 8
+                , Background.color <| rgb255 255 220 220
+                ]
+            <|
+                Element.text "Nothing matches..."
+    in
+    Dropdown.filterable
+        { itemsFromModel = HF.extractAllIngredientNamesFromModel
+        , selectionFromModel = .selectedIngredientInDropdown
+        , dropdownMsg = M.AddIngredientDropdownMsg
+        , onSelectMsg = M.AddIngredientDropdownSelectMsg
+        , itemToPrompt = itemToPrompt
+        , itemToElement = itemToElement
+        , itemToText = identity
+        }
+        |> Dropdown.withEmptyListElement emptyListElement
+        |> Dropdown.withContainerAttributes containerAttrs
+        |> Dropdown.withSelectAttributes selectAttrs
+        |> Dropdown.withListAttributes listAttrs
+        |> Dropdown.withSearchAttributes searchAttrs

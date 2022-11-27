@@ -1,8 +1,10 @@
 module HttpJsonController exposing (..)
 
 import Domain as D
+import HelperFunctions as HF
 import Json.Decode as JD
 import Json.Encode as JE
+import ModelMessage as M
 
 
 type Action
@@ -33,60 +35,9 @@ type Action
     | RemoveItemFromShoppingList
 
 
-
--- type alias CommandJson =
---     { action : Maybe Action
---     }
--- type alias RecipeNameJson =
---     { recipeName : Maybe String
---     }
--- type alias NewRecipeNameJson =
---     { newRecipeName : Maybe String
---     }
--- type alias IngredientNameJson =
---     { ingredientName : Maybe String
---     }
--- type alias PortionsJson =
---     { portions : Maybe Int
---     }
--- type alias LinkJson =
---     { link : Maybe D.HttpLink
---     }
--- type alias MenuNameJson =
---     { menuName : Maybe String
---     }
--- type alias NewMenuNameJson =
---     { newMenuName : Maybe String
---     }
--- type alias ShoppingListNameJson =
---     { shoppingListName : Maybe String
---     }
--- type alias NewShoppingListNameJson =
---     { newShoppingListName : Maybe String
---     }
--- type alias ShoppingItemNameJson =
---     { shoppingItemName : Maybe String
---     }
--- type alias OperationResponse =
---     { recipes : List D.Recipe
---     , menus : List D.Menu
---     , shoppingLists : List D.ShoppingList
---     , success : Maybe String
---     , error : Maybe String
---     }
-
-
-type alias ResponseJson =
-    { message : Maybe String
-    , recipes : List D.Recipe
-    , menus : List D.Menu
-    , shoppingLists : List D.ShoppingList
-    }
-
-
-responseDecoder : JD.Decoder ResponseJson
+responseDecoder : JD.Decoder M.ResponseJson
 responseDecoder =
-    JD.map4 ResponseJson
+    JD.map4 M.ResponseJson
         (JD.field "Message" (JD.maybe JD.string))
         (JD.field "Recipes" (JD.list recipeDecoder))
         (JD.field "Menus" (JD.list menuDecoder))
@@ -324,7 +275,7 @@ quantityEncoder : D.Quantity -> JE.Value
 quantityEncoder quantity =
     JE.object
         [ ( "Amount", JE.float quantity.amount )
-        , ( "Unit", JE.string (D.stringFromRecipeUnit quantity.unit) )
+        , ( "Unit", JE.string (HF.stringFromRecipeUnit quantity.unit) )
         ]
 
 
